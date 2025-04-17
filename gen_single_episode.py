@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 import cv2
 import numpy as np
@@ -8,7 +9,7 @@ import hydra
 
 from sapien_env.rl_env.mug_collect_env import BaseRLEnv
 from sapien_env.sim_env.constructor import add_default_scene_light
-from sapien_env.gui.gui_base import GUIBase, DEFAULT_TABLE_TOP_CAMERAS, YX_TABLE_TOP_CAMERAS
+from sapien_env.gui.gui_base import GUIBase  # no need to import the camera dicts here
 from gendp.common.data_utils import save_dict_to_hdf5
 from gendp.common.kinematics_utils import KinHelper
 
@@ -132,12 +133,9 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
     # setup cameras
     add_default_scene_light(env.scene, env.renderer)
     gui = GUIBase(env.scene, env.renderer, headless=headless)
-    for name, params in YX_TABLE_TOP_CAMERAS.items():
-        if "rotation" in params:
-            gui.create_camera_from_pos_rot(**params)
-        else:
-            gui.create_camera(**params)
+    # no extra loops — GUIBase already creates exactly 4 calibrated cameras
     if not gui.headless:
+        # optionally adjust the interactive viewer (not the mounted cameras)
         gui.viewer.set_camera_rpy(r=0, p=-0.5, y=np.pi / 2)
         gui.viewer.set_camera_xyz(x=0, y=0.5, z=0.5)
     env.scene.step()
