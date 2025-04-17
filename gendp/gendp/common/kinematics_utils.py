@@ -33,6 +33,13 @@ class KinHelper():
         elif "panda" in robot_name:
             urdf_path = f"{package_dir}/robot/panda/panda.urdf"
             self.eef_name = 'panda_hand'
+        elif "xarm" in robot_name:
+            # point this at wherever your xarm7.urdf actually lives:
+            urdf_path = f"{package_dir}/robot/xarm7/xarm7.urdf"
+            # set the end‑effector link name to whatever your xarm’s last link is called:
+            self.eef_name = "link6"   # or whatever appears in the URDF
+        else:
+            raise ValueError(f"KinHelper doesn't know URDF for '{robot_name}'")
         self.robot_name = robot_name
         # with suppress_stdout(): # suppress pybullet annoying print
         #     self.bullet_robot = p.loadURDF(urdf_path, useFixedBase=True)
@@ -295,6 +302,12 @@ class KinHelper():
             active_qmask= np.array([True,True,True,True,True,True,False,False])
         elif 'panda' in self.robot_name:
             active_qmask= np.array([True,True,True,True,True,True,True,True,True])
+        elif 'xarm' in self.robot_name:
+            # XArm7 has 7 arm joints (no separate gripper DOF here)
+            # allow all of them to move:
+            active_qmask = np.array([True] * initial_qpos.shape[0])
+        else:
+            raise ValueError(f"IK mask not defined for '{self.robot_name}'")
         qpos = self.robot_model.compute_inverse_kinematics(link_index=self.sapien_eef_idx, pose=pose, initial_qpos=initial_qpos,active_qmask=active_qmask, eps=1e-3, damp=1e-1)
         # verify ik
         fk_pose = self.compute_fk_sapien_links(qpos[0], [self.sapien_eef_idx])[0]
