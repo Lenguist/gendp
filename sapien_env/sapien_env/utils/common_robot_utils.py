@@ -20,7 +20,6 @@ class ArmRobotInfo(NamedTuple):
     root_offset: List[float] = [0.0, 0.0, 0.0]
 
 
-
 def generate_free_robot_hand_info() -> Dict[str, FreeRobotInfo]:
     shadow_hand_free_info = FreeRobotInfo(path="robot/shadow_hand_description/shadowhand_free.urdf", dof=28,
                                           palm_name="palm_center")
@@ -59,8 +58,29 @@ def generate_arm_robot_hand_info() -> Dict[str, ArmRobotInfo]:
         path="robot/xarm6_description/xarm6_allegro_digit_wrist_mounted_rotate.urdf",
         hand_dof=16, arm_dof=6, palm_name="palm_center", arm_init_qpos=[0, 0, 0, np.pi, np.pi / 2, np.pi],
         root_offset=[0.00, 0, 0])
-    xarm6 = ArmRobotInfo(path=str(xarm_path / "xarm6.urdf"), hand_dof=0, arm_dof=6, palm_name="link6", arm_init_qpos=[0, 0, 0, 0, -np.pi / 2, 0])
-    xarm6_with_gripper = ArmRobotInfo(path=str(xarm_path / "xarm6_with_gripper.urdf"), hand_dof=0, arm_dof=6, palm_name="link6", arm_init_qpos=[0, 0, 0, 0, -np.pi / 2, 0])
+    xarm6 = ArmRobotInfo(path=str(xarm_path / "xarm6.urdf"), hand_dof=0, arm_dof=6, palm_name="link6",
+                         arm_init_qpos=[0, 0, 0, 0, -np.pi / 2, 0])
+    xarm6_with_gripper = ArmRobotInfo(path=str(xarm_path / "xarm6_with_gripper.urdf"), hand_dof=0, arm_dof=6,
+                                      palm_name="link6", arm_init_qpos=[0, 0, 0, 0, -np.pi / 2, 0])
+
+    # Added XArm7 entry
+    xarm7_path = Path("robot/xarm7/")
+    xarm7 = ArmRobotInfo(
+        path=str(xarm7_path / "xarm7.urdf"),
+        hand_dof=0,
+        arm_dof=7,
+        palm_name="link7",
+        arm_init_qpos=[0, 0, 0, 0, -np.pi / 2, 0, 0]
+    )
+    # If you add a gripper URDF for XArm7, you can uncomment below:
+    # xarm7_with_gripper = ArmRobotInfo(
+    #     path=str(xarm7_path / "xarm7_with_gripper.urdf"),
+    #     hand_dof=2,
+    #     arm_dof=7,
+    #     palm_name="link7",
+    #     arm_init_qpos=[0, 0, 0, 0, -np.pi / 2, 0, 0]
+    # )
+
     info_dict = dict(
         xarm6=xarm6,
         xarm6_with_gripper=xarm6_with_gripper,
@@ -69,40 +89,55 @@ def generate_arm_robot_hand_info() -> Dict[str, ArmRobotInfo]:
         allegro_hand_xarm6_wrist_mounted_face_down=allegro_hand_xarm6_wrist_mounted_face_down,
         allegro_hand_xarm6_wrist_mounted_face_front=allegro_hand_xarm6_wrist_mounted_face_front,
         allegro_hand_digit_xarm6_wrist_mounted_face_front=allegro_hand_digit_xarm6_wrist_mounted_face_front,
+        xarm7=xarm7,
+        # xarm7_with_gripper=xarm7_with_gripper,
     )
     return info_dict
 
 
 def generate_trossen_info() -> Dict[str, ArmRobotInfo]:
     trossen_path = Path("robot/trossen_description/")
-    trossen_vx300 = ArmRobotInfo(path=str(trossen_path / "vx300.urdf"),  hand_dof = 2, arm_dof=5, palm_name="vx300/ee_arm_link", arm_init_qpos=[0, -0.8, 1, 1, 0])
-    trossen_vx300_tactile = ArmRobotInfo(path=str(trossen_path / "vx300_tactile.urdf"),  hand_dof = 2, arm_dof=5, palm_name="vx300/ee_arm_link", arm_init_qpos=[0, -0.8, 1, 1, 0])
-    trossen_vx300_tactile_map = ArmRobotInfo(path=str(trossen_path / "vx300_tactile_map_8.urdf"),  hand_dof = 2, arm_dof=5, palm_name="vx300/ee_arm_link", arm_init_qpos=[0, -0.8, 1, 1, 0])
-    trossen_vx300_tactile_map_4x4 = ArmRobotInfo(path=str(trossen_path / "vx300_tactile_map_4x4.urdf"),  hand_dof = 2, arm_dof=5, palm_name="vx300/ee_arm_link", arm_init_qpos=[0, -0.8, 1, 1, 0])
-    trossen_vx300_tactile_map_4x4_thin = ArmRobotInfo(path=str(trossen_path / "vx300_tactile_map_4x4_thin.urdf"),  hand_dof = 2, arm_dof=5, palm_name="vx300/ee_arm_link", arm_init_qpos=[0, -0.8, 1, 1, 0])
-    trossen_vx300s = ArmRobotInfo(path=str(trossen_path / "vx300s.urdf"),  hand_dof = 2, arm_dof=6, palm_name="vx300s/ee_arm_link", arm_init_qpos=[0, -0.8, 1.3, 0, 0,0])
-    trossen_vx300s_tactile_thin = ArmRobotInfo(path=str(trossen_path / "vx300s_tactile_thin_fix.urdf"),  hand_dof = 2, arm_dof=6, palm_name="vx300s/ee_arm_link", arm_init_qpos=[0, -0.8, 0.9, 0, 1.4,0])
+    trossen_vx300 = ArmRobotInfo(path=str(trossen_path / "vx300.urdf"), hand_dof=2, arm_dof=5,
+                                 palm_name="vx300/ee_arm_link", arm_init_qpos=[0, -0.8, 1, 1, 0])
+    trossen_vx300_tactile = ArmRobotInfo(path=str(trossen_path / "vx300_tactile.urdf"), hand_dof=2, arm_dof=5,
+                                         palm_name="vx300/ee_arm_link", arm_init_qpos=[0, -0.8, 1, 1, 0])
+    trossen_vx300_tactile_map = ArmRobotInfo(path=str(trossen_path / "vx300_tactile_map_8.urdf"), hand_dof=2,
+                                             arm_dof=5, palm_name="vx300/ee_arm_link", arm_init_qpos=[0, -0.8, 1, 1, 0])
+    trossen_vx300_tactile_map_4x4 = ArmRobotInfo(path=str(trossen_path / "vx300_tactile_map_4x4.urdf"), hand_dof=2,
+                                                 arm_dof=5, palm_name="vx300/ee_arm_link", arm_init_qpos=[0, -0.8, 1, 1, 0])
+    trossen_vx300_tactile_map_4x4_thin = ArmRobotInfo(path=str(trossen_path / "vx300_tactile_map_4x4_thin.urdf"),
+                                                     hand_dof=2, arm_dof=5, palm_name="vx300/ee_arm_link",
+                                                     arm_init_qpos=[0, -0.8, 1, 1, 0])
+    trossen_vx300s = ArmRobotInfo(path=str(trossen_path / "vx300s.urdf"), hand_dof=2, arm_dof=6,
+                                  palm_name="vx300s/ee_arm_link", arm_init_qpos=[0, -0.8, 1.3, 0, 0, 0])
+    trossen_vx300s_tactile_thin = ArmRobotInfo(path=str(trossen_path / "vx300s_tactile_thin_fix.urdf"), hand_dof=2,
+                                               arm_dof=6, palm_name="vx300s/ee_arm_link",
+                                               arm_init_qpos=[0, -0.8, 0.9, 0, 1.4, 0])
     info_dict = dict(
         trossen_vx300=trossen_vx300,
         trossen_vx300_tactile=trossen_vx300_tactile,
-        trossen_vx300_tactile_map =trossen_vx300_tactile_map,
-        trossen_vx300_tactile_map_4x4=trossen_vx300_tactile_map_4x4, 
-        trossen_vx300_tactile_map_4x4_thin =trossen_vx300_tactile_map_4x4_thin,
-        trossen_vx300s =trossen_vx300s,
+        trossen_vx300_tactile_map=trossen_vx300_tactile_map,
+        trossen_vx300_tactile_map_4x4=trossen_vx300_tactile_map_4x4,
+        trossen_vx300_tactile_map_4x4_thin=trossen_vx300_tactile_map_4x4_thin,
+        trossen_vx300s=trossen_vx300s,
         trossen_vx300s_tactile_thin=trossen_vx300s_tactile_thin
     )
     return info_dict
+
 
 def generate_panda_info() -> Dict[str, ArmRobotInfo]:
     panda = ArmRobotInfo(
         path="robot/panda/panda.urdf",
         # hand_dof=2, arm_dof=7, palm_name="panda_hand", arm_init_qpos=[0.0, 0.0, 0.4, np.pi, 0.0, np.pi / 2, 0.9],
-        hand_dof=2, arm_dof=7, palm_name="panda_hand", arm_init_qpos=[-2.214023, 0.17274654, 2.238009, -2.2748125, -0.16332519, 2.1609645, 0.9082864, 0.04, 0.04],
-        root_offset=[0.00, 0, 0])
+        hand_dof=2, arm_dof=7, palm_name="panda_hand",
+        arm_init_qpos=[-2.214023, 0.17274654, 2.238009, -2.2748125, -0.16332519, 2.1609645, 0.9082864, 0.04, 0.04],
+        root_offset=[0.00, 0, 0]
+    )
     info_dict = dict(
         panda=panda
     )
     return info_dict
+
 
 def generate_retargeting_link_names(robot_name):
     if "shadow_hand" in robot_name or "adroit_hand" in robot_name:
@@ -130,7 +165,6 @@ def wrap_link_hand_indices(link_hand_indices, method="tip_middle"):
     return result
 
 
-
 def load_robot(scene: sapien.Scene, robot_name, disable_self_collision=True) -> sapien.Articulation:
     loader = scene.create_urdf_loader()
     current_dir = Path(__file__).parent
@@ -146,7 +180,6 @@ def load_robot(scene: sapien.Scene, robot_name, disable_self_collision=True) -> 
         config = {}
     elif "panda" in robot_name:
         info = generate_panda_info()[robot_name]
-        config = {}
         config = {
             "link": {
                 "panda_leftfinger": {
@@ -165,6 +198,9 @@ def load_robot(scene: sapien.Scene, robot_name, disable_self_collision=True) -> 
                 },
             }
         }
+    else:
+        raise NotImplementedError(f"Unknown robot name: {robot_name}")
+
     robot_file = info.path
     filename = str(package_dir / robot_file)
     robot_builder = loader.load_file_as_articulation_builder(filename, config=config)
@@ -184,7 +220,6 @@ def load_robot(scene: sapien.Scene, robot_name, disable_self_collision=True) -> 
     root_rotation_control_params = np.array([0, 5000, 5000])
     finger_control_params = np.array([200, 60, 10])
 
-
     if "free" in robot_name:
         for joint in robot.get_active_joints():
             name = joint.get_name()
@@ -195,40 +230,28 @@ def load_robot(scene: sapien.Scene, robot_name, disable_self_collision=True) -> 
             else:
                 joint.set_drive_property(*(1 * finger_control_params), mode="force")
     elif "xarm" in robot_name:
-        arm_joint_names = [f"joint{i}" for i in range(1, 8)]
+        arm_joint_names = [f"joint{i}" for i in range(1, info.arm_dof + 1)]
         for joint in robot.get_active_joints():
             name = joint.get_name()
             if name in arm_joint_names:
                 joint.set_drive_property(*(1 * robot_arm_control_params), mode="force")
             else:
                 joint.set_drive_property(*(1 * finger_control_params), mode="force")
-
     elif "panda" in robot_name:
-        arm_joint_names = [f"joint{i}" for i in range(1, 8)]
+        arm_joint_names = [f"joint{i}" for i in range(1, info.arm_dof + 1)]
         for joint in robot.get_active_joints():
             name = joint.get_name()
             if name in arm_joint_names:
                 joint.set_drive_property(*(1 * robot_arm_control_params), mode="force")
             else:
                 joint.set_drive_property(*(3 * finger_control_params), mode="force")
-
     elif "trossen" in robot_name:
-        # arm_joint_names = [f"joint{i}" for i in range(0, 6)]
-        # print(robot.get_active_joints())
         for joint in robot.get_active_joints():
             name = joint.get_name()
-            # if "left_finger" in name or "right_finger" in name:
-            #     joint.set_drive_property(*10*(np.array([100,8,5])), mode="force")
-            # else:
-            #     joint.set_drive_property(*8*(np.array([100,10,5])), mode="force")
-            # if "left_finger" in name or "right_finger" in name:
-            #     joint.set_drive_property(*10*(np.array([100,10,5])), mode="force")
-            # else:
-            #     joint.set_drive_property(*10*(np.array([100,10,5])), mode="force")
             if "left_finger" in name or "right_finger" in name:
-                joint.set_drive_property(*50*(np.array([100,10,5])), mode="force")
+                joint.set_drive_property(*50 * (np.array([100, 10, 5])), mode="force")
             else:
-                joint.set_drive_property(*30*(np.array([100,10,5])), mode="force")
+                joint.set_drive_property(*30 * (np.array([100, 10, 5])), mode="force")
     else:
         raise NotImplementedError
 

@@ -88,6 +88,18 @@ def task_to_cfg(task, manip_obj=None):
                 '_target_': 'sapien_env.teleop.pen_insertion_scripted_policy.SingleArmPolicy',
             }
         )
+    elif task == 'cube_pick':
+        cfg = OmegaConf.create({
+            '_target_': 'sapien_env.rl_env.cube_pick_env.CubePickRLEnv',
+            'use_gui': True,
+            'frame_skip': 10,
+            'robot_name': 'xarm7',
+            'use_visual_obs': False,
+        })
+        # reuse an existing scripted policy so it just runs some arm motion
+        policy_cfg = OmegaConf.create({
+            '_target_': 'sapien_env.teleop.cube_pick_scripted_policy.SingleArmPolicy',
+        })
     else:
         raise ValueError(f'Unknown task {task}')
     return cfg, policy_cfg
