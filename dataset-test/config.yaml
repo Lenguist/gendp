@@ -1,0 +1,5 @@
+_target_: sapien_env.rl_env.cube_pick_env.CubePickRLEnv
+use_gui: true
+frame_skip: 10
+robot_name: xarm7
+use_visual_obs: false

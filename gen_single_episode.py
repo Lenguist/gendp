@@ -45,56 +45,7 @@ def transform_action_from_world_to_robot(action: np.ndarray, pose: sapien.Pose):
 
 
 def task_to_cfg(task, manip_obj=None):
-    if task == "hang_mug":
-        cfg = OmegaConf.create(
-            {
-                "_target_": "sapien_env.rl_env.hang_mug_env.HangMugRLEnv",
-                "use_gui": True,
-                "robot_name": "panda",
-                "frame_skip": 10,
-                "use_visual_obs": False,
-                "manip_obj": "nescafe_mug" if manip_obj is None else manip_obj,
-            }
-        )
-        policy_cfg = OmegaConf.create(
-            {
-                "_target_": "sapien_env.teleop.hang_mug_scripted_policy.SingleArmPolicy",
-            }
-        )
-    elif task == "mug_collect":
-        cfg = OmegaConf.create(
-            {
-                "_target_": "sapien_env.rl_env.mug_collect_env.MugCollectRLEnv",
-                "use_gui": True,
-                "robot_name": "panda",
-                "frame_skip": 10,
-                "use_visual_obs": False,
-                "manip_obj": "pepsi" if manip_obj is None else manip_obj,
-                "randomness_level": "half",
-            }
-        )
-        policy_cfg = OmegaConf.create(
-            {
-                "_target_": "sapien_env.teleop.mug_collect_scripted_policy.SingleArmPolicy",
-            }
-        )
-    elif task == "pen_insertion":
-        cfg = OmegaConf.create(
-            {
-                "_target_": "sapien_env.rl_env.pen_insertion_env.PenInsertionRLEnv",
-                "use_gui": True,
-                "robot_name": "panda",
-                "frame_skip": 10,
-                "use_visual_obs": False,
-                "manip_obj": "pencil" if manip_obj is None else manip_obj,
-            }
-        )
-        policy_cfg = OmegaConf.create(
-            {
-                "_target_": "sapien_env.teleop.pen_insertion_scripted_policy.SingleArmPolicy",
-            }
-        )
-    elif task == "cube_pick":
+    if task == "cube_pick":
         cfg = OmegaConf.create(
             {
                 "_target_": "sapien_env.rl_env.cube_pick_env.CubePickRLEnv",
@@ -124,7 +75,7 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
 
     # instantiate env & IK helper
     env: BaseRLEnv = hydra.utils.instantiate(cfg)
-    kin_helper = KinHelper(robot_name=env.robot_name)
+    kin_helper = KinHelper(robot_name=env.robot_name) #kinematics util helper
 
     env.seed(episode_idx)
     env.reset()
@@ -261,42 +212,44 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
 
 
 if __name__ == "__main__":
-    import argparse
+    # import argparse
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "episode_idx", help="random seed for the episode"
-    )
-    parser.add_argument(
-        "dataset_dir",
-        help="directory to save the dataset"
-    )
-    parser.add_argument(
-        "task_name",
-        help="task name: hang_mug, mug_collect, pen_insertion, cube_pick"
-    )
-    parser.add_argument(
-        "--headless",
-        action="store_true",
-        help="whether to run in headless mode"
-    )
-    parser.add_argument(
-        "--obj_name",
-        default=None,
-        help="manipulated object name (for mug tasks)"
-    )
-    parser.add_argument(
-        "--mode",
-        default="straight",
-        help="mode for scripted policy"
-    )
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument(
+    #     "episode_idx", help="random seed for the episode"
+    # )
+    # parser.add_argument(
+    #     "dataset_dir",
+    #     default = "dataset-test",
+    #     help="directory to save the dataset"
+    # )
+    # parser.add_argument(
+    #     "task_name",
+    #     default = "cube_pick",
+    #     help="task name: hang_mug, mug_collect, pen_insertion, cube_pick"
+    # )
+    # parser.add_argument(
+    #     "--headless",
+    #     action="store_true",
+    #     help="whether to run in headless mode"
+    # )
+    # parser.add_argument(
+    #     "--obj_name",
+    #     default=None,
+    #     help="manipulated object name (for mug tasks)"
+    # )
+    # parser.add_argument(
+    #     "--mode",
+    #     default="straight",
+    #     help="mode for scripted policy"
+    # )
+    # args = parser.parse_args()
 
     main_env(
-        episode_idx=int(args.episode_idx),
-        dataset_dir=args.dataset_dir,
-        headless=args.headless,
-        mode=args.mode,
-        task_name=args.task_name,
-        manip_obj=args.obj_name,
+        episode_idx=0,
+        dataset_dir="dataset-test",
+        headless=False,
+        mode="straight",
+        task_name="cube_pick",
+        manip_obj=None,
     )
