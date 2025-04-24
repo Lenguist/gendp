@@ -93,7 +93,7 @@ def task_to_cfg(task, manip_obj=None):
             '_target_': 'sapien_env.rl_env.cube_pick_env.CubePickRLEnv',
             'use_gui': True,
             'frame_skip': 10,
-            'robot_name': 'xarm7',
+            'robot_name': 'panda',
             'use_visual_obs': False,
         })
         # reuse an existing scripted policy so it just runs some arm motion

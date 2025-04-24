@@ -1,0 +1,50 @@
+List of changes to make:
+- add cube picking as task
+- test it with panda robot
+- add xarm robot
+- do cube picking with xarm robot
+- add gripper
+- do cube picking with xarm robot with gripper
+- load correct cameras
+- do cube picking with xarm robot with gripper and correct cameras
+
+
+Currently at - add cube picking as task
+
+What is neccesary for it?
+
+In gen_single_episode.py:
+- add cube_pick as a possible task
+it requires sapien_env.rl_env.cube_pick_env
+which requires sapien_env.sim_env.cube_env
+and requires a policy sapien_env.teleop.cube_pick_scripted_policy.SingleArmPolicy
+
+
+
+
+
+
+
+
+
+OLD NOTES:
+intriscis
+
+focus cemter position
+
+
+extrnisic 
+
+transformation between camera coordinate and world coordinate
+
+have orgin point and xyz 
+
+for camera
+have origin at the center of the imagee
+
+and x, y axes parallel to the image, z towards object
+
+
+gonna create a clean fork of the old thing
+
+so cu
