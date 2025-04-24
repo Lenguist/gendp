@@ -12,6 +12,7 @@ from sapien_env.sim_env.constructor import add_default_scene_light
 from sapien_env.gui.gui_base import GUIBase, DEFAULT_TABLE_TOP_CAMERAS, YX_TABLE_TOP_CAMERAS
 from gendp.common.data_utils import save_dict_to_hdf5
 from gendp.common.kinematics_utils import KinHelper
+from datetime import datetime
 
 def stack_dict(dic):
     # stack list of numpy arrays into a single numpy array inside a nested dict
@@ -236,19 +237,20 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
     env.close()
 
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('episode_idx', help='random seed for the episode')
-    parser.add_argument('dataset_dir', help='directory to save the dataset')
-    parser.add_argument('task_name', help='task name, including hang_mug, mug_collect, pen_insertion')
-    parser.add_argument('--headless', action='store_true', help='whether to run in headless mode')
-    parser.add_argument('--obj_name', default=None, help='manipulated object name. The full list is shown in YX_DEFAULT_SCALE at sapien_env/sapien_env/utils/yx_object_utils.py')
-    parser.add_argument('--mode', default='straight', help='mode for scripted policy. Examples are shown in generate_trajectory() at sapien_env/sapien_env/teleop/mug_collect_scripted_policy.py')
-    args = parser.parse_args()
+    # import argparse
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('episode_idx', help='random seed for the episode')
+    # parser.add_argument('dataset_dir', help='directory to save the dataset')
+    # parser.add_argument('task_name', help='task name, including hang_mug, mug_collect, pen_insertion')
+    # parser.add_argument('--headless', action='store_true', help='whether to run in headless mode')
+    # parser.add_argument('--obj_name', default=None, help='manipulated object name. The full list is shown in YX_DEFAULT_SCALE at sapien_env/sapien_env/utils/yx_object_utils.py')
+    # parser.add_argument('--mode', default='straight', help='mode for scripted policy. Examples are shown in generate_trajectory() at sapien_env/sapien_env/teleop/mug_collect_scripted_policy.py')
+    # args = parser.parse_args()
 
-    main_env(episode_idx=int(args.episode_idx),
-             dataset_dir=args.dataset_dir,
-             headless=args.headless,
-             mode=args.mode,
-             manip_obj=args.obj_name,
-             task_name=args.task_name)
+    dataset_dir = os.path.join('datasets', datetime.now().strftime('%Y%m%d_%H%M%S'))
+    main_env(episode_idx=0,
+             dataset_dir=dataset_dir,
+             headless=False,
+             mode="straight",
+             manip_obj=None,
+             task_name="cube_pick")
