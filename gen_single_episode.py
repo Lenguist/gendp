@@ -253,4 +253,4 @@ if __name__ == '__main__':
              headless=False,
              mode="straight",
              manip_obj=None,
-             task_name="cube_pick")
+             task_name="hang_mug")

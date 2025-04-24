@@ -1,6 +1,6 @@
-List of changes to make:
+HIGH LEVEL PLAN:
 - add cube picking as task
-- test it with panda robot
+- test it with panda robot - CURRENTLY HERE
 - add xarm robot
 - do cube picking with xarm robot
 - add gripper
@@ -8,8 +8,15 @@ List of changes to make:
 - load correct cameras
 - do cube picking with xarm robot with gripper and correct cameras
 
+RUNNING TASKS:
+relevant (from readme)
+To adjust camera views, please change YX_TABLE_TOP_CAMERAS within sapien_env/sapien_env/gui/gui_base.py.
+Test visualization with panda
 
-Currently at - add cube picking as task
+
+UPDATES:
+Ran cube_picking with panda robot and it works.
+Let's understand better why and add print statements
 
 What is neccesary for it?
 
@@ -18,6 +25,58 @@ In gen_single_episode.py:
 it requires sapien_env.rl_env.cube_pick_env
 which requires sapien_env.sim_env.cube_env
 and requires a policy sapien_env.teleop.cube_pick_scripted_policy.SingleArmPolicy
+
+
+
+Let's analyze what's happenign when i run gen_single_episode.py with cube_pick task
+
+create kinematics helper for our specific robot:
+ kin_helper = KinHelper(robot_name="panda")
+creat policy and env from config
+ cfg, policy_cfg = task_to_cfg(task_name, manip_obj=manip_obj)
+save config into dataset directory
+    with open(os.path.join(dataset_dir, 'config.yaml'), 'w') as f:
+        OmegaConf.save(cfg, f.name)
+Instantiate the using hydra + config
+    # collect data
+    env : BaseRLEnv = hydra.utils.instantiate(cfg)
+    env.seed(episode_idx)
+    env.reset()
+    arm_dof = env.arm_dof
+
+Adding more stuff to env
+ add_default_scene_light(env.scene, env.renderer)
+Creating gui
+ gui = GUIBase(env.scene, env.renderer,headless=headless)
+
+
+
+
+
+
+
+
+Finish with mail then look at env files
+let's understand the env files first actyaly and then come back to main
+
+
+
+collecting example data with hang_mug to see what the whole episode data looks like
+
+okay full dataset is saved into hdf5 file
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

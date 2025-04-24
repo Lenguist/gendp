@@ -10,7 +10,7 @@ from gendp.common.data_utils import load_dict_from_hdf5
 epi_range = [0]
 
 curr_dir = os.path.dirname(os.path.abspath(__file__))
-data_dir = f'{curr_dir}/../../data/sapien_demo/hang_mug_demo'
+data_dir = f'/home/maksymbondarenko/Desktop/gendp/datasets/20250424_142821/'
 obs_keys = [
             'front_view_color',
             'front_view_depth',

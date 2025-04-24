@@ -14,7 +14,7 @@ epi_range = [0]
 vis_robot = True
 vis_action = True
 curr_dir = os.path.dirname(os.path.abspath(__file__))
-data_dir = f'{curr_dir}/../../data/sapien_demo/hang_mug_demo'
+data_dir = f'/home/maksymbondarenko/Desktop/gendp/datasets/20250424_142821/'
 robot_name = 'panda'
 cam_keys = ['right_bottom_view', 'left_bottom_view', 'right_top_view', 'left_top_view']
 
