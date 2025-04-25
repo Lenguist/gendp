@@ -33,10 +33,9 @@ class KinHelper():
         elif "panda" in robot_name:
             urdf_path = f"{package_dir}/robot/panda/panda.urdf"
             self.eef_name = 'panda_hand'
-        elif "xarm" in robot_name:
-            print('got here')
-            urdf_path = f"{package_dir}/robot/xarm7/xarm7.urdf"
-            self.eef_name = 'link6'
+        elif "xarm7_with_gripper" in robot_name:
+            urdf_path = f"{package_dir}/robot/xarm7_with_gripper/xarm7_with_gripper.urdf"
+            self.eef_name = 'link7'
         self.robot_name = robot_name
         # with suppress_stdout(): # suppress pybullet annoying print
         #     self.bullet_robot = p.loadURDF(urdf_path, useFixedBase=True)
@@ -302,7 +301,7 @@ class KinHelper():
         elif 'panda' in self.robot_name:
             active_qmask= np.array([True,True,True,True,True,True,True,True,True])
         elif 'xarm7' in self.robot_name:
-            active_qmask = np.array([True] * 7)  # adjust if needed
+            active_qmask = np.array([True] * 13)  # adjust if needed
         qpos = self.robot_model.compute_inverse_kinematics(link_index=self.sapien_eef_idx, pose=pose, initial_qpos=initial_qpos,active_qmask=active_qmask, eps=1e-3, damp=1e-1)
         # verify ik
         fk_pose = self.compute_fk_sapien_links(qpos[0], [self.sapien_eef_idx])[0]

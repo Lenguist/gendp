@@ -108,7 +108,9 @@ def task_to_cfg(task, manip_obj=None):
 def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None):
     # initialize env
     os.system(f'mkdir -p {dataset_dir}')
-    kin_helper = KinHelper(robot_name="panda")
+    robot_name = "xarm7_with_gripper"
+    print(f"USING ROBOT {robot_name}")
+    kin_helper = KinHelper(robot_name=robot_name)
 
     cfg, policy_cfg = task_to_cfg(task_name, manip_obj=manip_obj)
     
@@ -198,6 +200,7 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
         if quit:
             break
         cartisen_action_in_rob = transform_action_from_world_to_robot(cartisen_action,env.robot.get_pose())
+        print("got here")
         action[:arm_dof] = kin_helper.compute_ik_sapien(env.robot.get_qpos()[:],cartisen_action_in_rob)[:arm_dof]
         action[arm_dof:] = cartisen_action_in_rob[6]
         # print(action)

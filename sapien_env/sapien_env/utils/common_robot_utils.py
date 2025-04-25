@@ -72,12 +72,11 @@ def generate_arm_robot_hand_info() -> Dict[str, ArmRobotInfo]:
     #     palm_name="link6",
     #     arm_init_qpos=[0, 0, 0, 0, -np.pi / 2, 0, 0]
     # )
-    If you add a gripper URDF for XArm7, you can uncomment below:
     xarm7_with_gripper = ArmRobotInfo(
-        path=str(xarm7_path / "xarm7_with_gripper.urdf"),
+        path=str("robot/xarm7_with_gripper/xarm7_with_gripper.urdf"),
         hand_dof=2,
         arm_dof=7,
-        palm_name="link7",
+        palm_name="link_tcp",
         arm_init_qpos=[0, 0, 0, 0, -np.pi / 2, 0, 0]
     )
 
