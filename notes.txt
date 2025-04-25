@@ -314,8 +314,26 @@ y is closer to us positive
 
 
 
+ok makes sense. now let's look at the RL env
+
+to add my robot will need to add it to:
+kinematics helper
+common_robot_utils
+where else?
+
+it might be the case that all i need to do to align is to offset by the origin position in data recording relative to the origin position in simulation (center of the table/workspace)
+
+why is initial position for robot this?
+
+self.robot.set_pose(sapien.Pose(np.array([0, 0, -5])))
+
+no current support for xarm despite itseeming like it is
+
+    def step(self, action: np.ndarray):
 
 
+so this is a key funciton in the evnironment. it steps given an action.
+an action is encoded diffrently for different robots
 
 
 
