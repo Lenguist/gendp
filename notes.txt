@@ -341,10 +341,29 @@ okay i will keep workign bc i want to wake up with stuff working
 policy always outputs cartisan action. then inverse kinematics handles converting that into real world
 
 
+to reproduce trajecories: build preprocess.py that takes in trajectory files and converts them into a scripted trajectory
+
+will live in replay_cube_episode_policy.py
+
+so:
+
+        action[:arm_dof] = kin_helper.compute_ik_sapien(env.robot.get_qpos()[:],
+                                                        cartisen_action_in_rob)[:arm_dof]
+
+this will fail for xarm robot
+
+will handle gripper later
+
+
+ALOHA ROBOT ALREADY LOADED HERE GODDAMN
+
+test it tmrw
 
 
 
+setup supposedly should already handle xarm
 
+clear datasets
 
 
 

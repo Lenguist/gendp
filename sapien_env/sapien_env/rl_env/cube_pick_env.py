@@ -48,12 +48,12 @@ class CubePickRLEnv(CubePickEnv, BaseRLEnv):
         self.palm_link = next(
             link for link in self.robot.get_links()
             if link.get_name() == self.palm_link_name)
-        finger_tip_names = ["panda_leftfinger", "panda_rightfinger"]
+        # finger_tip_names = ["panda_leftfinger", "panda_rightfinger"]
         names = [l.get_name() for l in self.robot.get_links()]
-        self.finger_tip_links = [
-            self.robot.get_links()[names.index(n)]
-            for n in finger_tip_names
-        ]
+        # self.finger_tip_links = [
+        #     self.robot.get_links()[names.index(n)]
+        #     for n in finger_tip_names
+        # ]
         # Record cube pose
         self.object_episode_init_pose = sapien.Pose()
 

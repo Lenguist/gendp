@@ -94,7 +94,7 @@ def task_to_cfg(task, manip_obj=None):
             '_target_': 'sapien_env.rl_env.cube_pick_env.CubePickRLEnv',
             'use_gui': True,
             'frame_skip': 10,
-            'robot_name': 'panda',
+            'robot_name': "xarm7_with_gripper",
             'use_visual_obs': False,
         })
         # reuse an existing scripted policy so it just runs some arm motion
@@ -249,7 +249,7 @@ if __name__ == '__main__':
     dataset_dir = os.path.join('datasets', datetime.now().strftime('%Y%m%d_%H%M%S'))
     main_env(episode_idx=0,
              dataset_dir=dataset_dir,
-             headless=False,
+             headless=True,
              mode="straight",
              manip_obj=None,
              task_name="cube_pick")
