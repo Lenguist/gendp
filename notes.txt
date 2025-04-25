@@ -49,21 +49,237 @@ Adding more stuff to env
 Creating gui
  gui = GUIBase(env.scene, env.renderer,headless=headless)
 
+Setting up cameras
+    # Setup viewer and camera
+    add_default_scene_light(env.scene, env.renderer)
+    gui = GUIBase(env.scene, env.renderer,headless=headless)
+    for name, params in YX_TABLE_TOP_CAMERAS.items():
+        if 'rotation' in params:
+            gui.create_camera_from_pos_rot(**params)
+        else:
+            gui.create_camera(**params)
+    if not gui.headless:
+        gui.viewer.set_camera_rpy(r=0, p=-0.5, y=np.pi/2)
+        gui.viewer.set_camera_xyz(x=0, y=0.5, z=0.5)
+
+when i will need to change caeras i will just need to change those parameters
+
+    scene = env.scene
+    scene.step()
+    not sure what this does
+
+Then we instantiate the policy
+ scripted_policy = hydra.utils.instantiate(policy_cfg)
+Then we get initial poses from environemnt
+    init_poses = env.get_init_poses()
+
+This is the data we save at each time step
+    data_dict = {
+        'observations': 
+            {'joint_pos': [],
+             'joint_vel': [],
+             'full_joint_pos': [], # this is to compute FK
+             'robot_base_pose_in_world': [],
+             'ee_pos': [],
+             'ee_vel': [],
+            #  'finger_pos': {},
+             'images': {},},
+        'joint_action': [],
+        'cartesian_action': [],
+        'info':
+            {'init_poses': init_poses}
+    }
+joint positions for each joint
+joint velocities foer each joint
+some list that is more full for forward kinematics
+robot_base_pose_in_world - position of robot base in the world i think?
+ee_pos?
+ee_vel?
+finger positions - not using that right now
+images
+
+joint_action list
+cartesian action - prob the translation of the gripper
+and in info we add initial poses
+
+okay kinda makes sense although a few questions remain
+
+cams = gui.cams - so gui env contains cam field
+    for cam in cams:
+        data_dict['observations']['images'][f'{cam.name}_color'] = []
+        data_dict['observations']['images'][f'{cam.name}_depth'] = []
+        data_dict['observations']['images'][f'{cam.name}_intrinsic'] = []
+        data_dict['observations']['images'][f'{cam.name}_extrinsic'] = []
+so for each camera we save color image, depth image, intrinsic params and extrinsic params
+
+and also in config_dict we write the following data
+    config_dict = {
+        'observations':
+            {
+                'images': {}
+            }
+    }
+    for cam_idx, cam in enumerate(gui.cams):
+        color_save_kwargs = {
+            'chunks': (1, cam.height, cam.width, 3), # (1, 480, 640, 3)
+            'compression': 'gzip',
+            'compression_opts': 9,
+            'dtype': 'uint8',
+        }
+        depth_save_kwargs = {
+            'chunks': (1, cam.height, cam.width), # (1, 480, 640)
+            'compression': 'gzip',
+            'compression_opts': 9,
+            'dtype': 'uint16',
+        }
+        config_dict['observations']['images'][f'{cam.name}_color'] = color_save_kwargs
+        config_dict['observations']['images'][f'{cam.name}_depth'] = depth_save_kwargs
+
+so just camera save params basically
+
+this is the meat of the runtime
+
+while True:
+        action = np.zeros(arm_dof+1)
+        cartisen_action, quit = scripted_policy.single_trajectory(env,env.palm_link.get_pose(),mode=mode)
+        # transform cartisen_action from robot to world frame
+        if quit:
+            break
+        cartisen_action_in_rob = transform_action_from_world_to_robot(cartisen_action,env.robot.get_pose())
+        action[:arm_dof] = kin_helper.compute_ik_sapien(env.robot.get_qpos()[:],cartisen_action_in_rob)[:arm_dof]
+        action[arm_dof:] = cartisen_action_in_rob[6]
+        # print(action)
+        obs, reward, done, _ = env.step(action[:arm_dof+1])
+        rgbs, depths = gui.render(depth=True)
+        
+        data_dict['observations']['joint_pos'].append(env.robot.get_qpos()[:-1])
+        data_dict['observations']['joint_vel'].append(env.robot.get_qvel()[:-1])
+        data_dict['observations']['full_joint_pos'].append(env.robot.get_qpos())
+        data_dict['observations']['robot_base_pose_in_world'].append(env.robot.get_pose().to_transformation_matrix())
+        ee_translation = env.palm_link.get_pose().p
+        ee_rotation = transforms3d.euler.quat2euler(env.palm_link.get_pose().q,axes='sxyz')
+        ee_gripper = env.robot.get_qpos()[arm_dof]
+        ee_pos = np.concatenate([ee_translation,ee_rotation,[ee_gripper]])
+        ee_vel = np.concatenate([env.palm_link.get_velocity(),env.palm_link.get_angular_velocity(),env.robot.get_qvel()[arm_dof:arm_dof+1]])
+        data_dict['observations']['ee_pos'].append(ee_pos)
+        data_dict['observations']['ee_vel'].append(ee_vel)
+        data_dict['joint_action'].append(action.copy())
+        data_dict['cartesian_action'].append(cartisen_action.copy())
+        # for finger_idx, finger in enumerate(finger_names):
+        #     pose = env.finger_tip_links[finger_idx].get_pose()
+        #     data_dict['observations']['finger_pos'][finger].append(pose.to_transformation_matrix())
+        for cam_idx, cam in enumerate(gui.cams):
+            data_dict['observations']['images'][f'{cam.name}_color'].append(rgbs[cam_idx])
+            data_dict['observations']['images'][f'{cam.name}_depth'].append(depths[cam_idx])
+            data_dict['observations']['images'][f'{cam.name}_intrinsic'].append(cam.get_intrinsic_matrix())
+            data_dict['observations']['images'][f'{cam.name}_extrinsic'].append(cam.get_extrinsic_matrix())
+        timesteps += 1
+    if reward < 1:
+        print("Failed at episode {}".format(episode_idx))
+    data_dict = stack_dict(data_dict)
+    save_dict_to_hdf5(data_dict, config_dict, dataset_path, attr_dict=attr_dict)
+    if not gui.headless:
+        gui.viewer.close()
+        cv2.destroyAllWindows()
+    env.close()
+
+so we keep goign with episode until completion 
+- alternatively i can try doing this a certain # of timesteps
+action = np.zeros(arm_dof+1)
+action is degrees of freedom of arm + 1. where is the +1 coming from? what is arm_dof for smth like panda?
+
+when we stop determined by the scripted policy
+
+cartisen_action_in_rob = transform_action_from_world_to_robot(cartisen_action,env.robot.get_pose())
+here we transform cartisen action int robot coordinates using this function
+
+def transform_action_from_world_to_robot(action : np.ndarray, pose : sapien.Pose):
+    # :param action: (7,) np.ndarray in world frame. action[:3] is xyz, action[3:6] is euler angle, action[6] is gripper
+    # :param pose: sapien.Pose of the robot base in world frame
+    # :return: (7,) np.ndarray in robot frame. action[:3] is xyz, action[3:6] is euler angle, action[6] is gripper
+    # transform action from world to robot frame
+    action_mat = np.zeros((4,4))
+    action_mat[:3,:3] = transforms3d.euler.euler2mat(action[3], action[4], action[5])
+    action_mat[:3,3] = action[:3]
+    action_mat[3,3] = 1
+    action_mat_in_robot = np.matmul(np.linalg.inv(pose.to_transformation_matrix()),action_mat)
+    action_robot = np.zeros(7)
+    action_robot[:3] = action_mat_in_robot[:3,3]
+    action_robot[3:6] = transforms3d.euler.mat2euler(action_mat_in_robot[:3,:3],axes='sxyz')
+    action_robot[6] = action[6]
+    return action_robot
+
+ # :param action: (7,) np.ndarray in world frame. action[:3] is xyz, action[3:6] is euler angle, action[6] is gripper
+here is how we define the action. so this is independent of the robot representation.
+# :param pose: sapien.Pose of the robot base in world frame
+What is sapien pose?
+return: (7,) np.ndarray in robot frame. action[:3] is xyz, action[3:6] is euler angle, action[6] is gripper
+this should be the same unless you chnage robot representation
+rn our robot represetnation is the same
+
+
+
+action[:arm_dof] = kin_helper.compute_ik_sapien(env.robot.get_qpos()[:],cartisen_action_in_rob)[:arm_dof]
+
+so the actual action (up to degrees of freedom) is computed by sapien
+and then degree of freedom until the end is the gripper openess from cartisen_action_in_rob[6]
+
+let's look at the compute_ik sapien funciton
+
+
+
+
+then we get observation, reward, done from env.step
+and we get rgbs and depths from gui
+        obs, reward, done, _ = env.step(action[:arm_dof+1])
+        rgbs, depths = gui.render(depth=True)
+
+then env also provides us with interface to get positions, velocities observation
+        data_dict['observations']['joint_pos'].append(env.robot.get_qpos()[:-1])
+        data_dict['observations']['joint_vel'].append(env.robot.get_qvel()[:-1])
+        data_dict['observations']['full_joint_pos'].append(env.robot.get_qpos())
+        data_dict['observations']['robot_base_pose_in_world'].append(env.robot.get_pose().to_transformation_matrix())
+
+this i dont understand too well. is this quaterniion to euler conversion? really ont sure
+        ee_translation = env.palm_link.get_pose().p
+        ee_rotation = transforms3d.euler.quat2euler(env.palm_link.get_pose().q,axes='sxyz')
+        ee_gripper = env.robot.get_qpos()[arm_dof]
+        ee_pos = np.concatenate([ee_translation,ee_rotation,[ee_gripper]])
+        ee_vel = np.concatenate([env.palm_link.get_velocity(),env.palm_link.get_angular_velocity(),env.robot.get_qvel()[arm_dof:arm_dof+1]])
+        data_dict['observations']['ee_pos'].append(ee_pos)
+        data_dict['observations']['ee_vel'].append(ee_vel)
+
+and then we append the info about hte action here as well
+        data_dict['joint_action'].append(action.copy())
+        data_dict['cartesian_action'].append(cartisen_action.copy())
+
+so basically it seems important classes for me to understand is
+
+sim_env
+rl_env (open ai gym env wraps around sim_env)
+kinematics helper (converts cartesian coordinate into robot actions)
+gui (handles images, rendering)
+
+
+ok. let's look at each of those one by one. starting with the hang_mug_env in sim_env
+
+let's look at base.py first
+
+class BaseSimulationEnv(object):
+    def __init__(self, use_gui=True, frame_skip=5, use_visual_obs=False, no_rgb=False, need_offscreen_render=False, use_ray_tracing=False,
+                 **renderer_kwargs):
+
+so takes in use_gui or not. frame skip? what is that. whether to use visual observation or not, no rgb, need offscreen render? and ray use_ray_tracing
+
+        engine, renderer = get_engine_and_renderer(use_gui=use_gui, need_offscreen_render=need_offscreen_render,
+                                                   no_rgb=no_rgb, use_ray_tracing=use_ray_tracing, **renderer_kwargs)
+so this we get from here from sapien_env.sim_env.constructor import get_engine_and_renderer, add_default_scene_light
+and i will likley not need to change it
 
 
 
 
 
-
-
-Finish with mail then look at env files
-let's understand the env files first actyaly and then come back to main
-
-
-
-collecting example data with hang_mug to see what the whole episode data looks like
-
-okay full dataset is saved into hdf5 file
 
 
 
