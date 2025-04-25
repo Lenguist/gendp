@@ -5,7 +5,8 @@ import transforms3d.euler
 from sapien_env.sim_env.base import BaseSimulationEnv
 
 class CubePickEnv(BaseSimulationEnv):
-    def __init__(self, use_gui=True, frame_skip=5, use_ray_tracing=True, **renderer_kwargs):
+    def __init__(self, use_gui=True, frame_skip=5, use_ray_tracing=True, **renderer_kwargs)
+    super().__init__(use_gui=use_gui, frame_skip=frame_skip, use_ray_tracing=use_ray_tracing, **renderer_kwargs):
         # 1) Initialize base sim (engine, renderer)
         super().__init__(
             use_gui=use_gui,
@@ -34,6 +35,12 @@ class CubePickEnv(BaseSimulationEnv):
         # Place cube at random X/Y on table (Z = half-height = 0.05)
         x = self.np_random.uniform(0.1, 0.2)
         y = self.np_random.uniform(-0.2, -0.1)
+        pos = np.array([x, y, 0.05])  # z = half-height
+        quat = transforms3d.euler.euler2quat(0, 0, 0)
+        self.cube.set_pose(sapien.Pose(pos, quat))
+
+    def put_cube_at_pos(self, x, y):
+        # Place cube at random X/Y on table (Z = half-height = 0.05)
         pos = np.array([x, y, 0.05])  # z = half-height
         quat = transforms3d.euler.euler2quat(0, 0, 0)
         self.cube.set_pose(sapien.Pose(pos, quat))
