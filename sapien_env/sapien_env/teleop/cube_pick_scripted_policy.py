@@ -58,12 +58,13 @@ class SingleArmPolicy:
         action[6] = gripper
         return action, False
 
+# this will be different depending on robot gripper size
     def generate_trajectory(self, env: CubePickRLEnv, ee_link_pose, mode='straight'):
         # world pose of cube
         cube_pose = env.cube.get_pose()
         # Define key poses
         pre_grasp = cube_pose.p + np.array([0.0, 0.0, 0.2])
-        grasp = cube_pose.p + np.array([0.0, 0.0, 0.05])
+        grasp = cube_pose.p + np.array([0.0, 0.0, 0.1])
         leave = cube_pose.p + np.array([0.0, 0.0, 0.3])
         # Keep orientation constant (current ee orientation)
         quat = ee_link_pose.q

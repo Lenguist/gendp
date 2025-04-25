@@ -335,6 +335,10 @@ no current support for xarm despite itseeming like it is
 so this is a key funciton in the evnironment. it steps given an action.
 an action is encoded diffrently for different robots
 
+okay i will keep workign bc i want to wake up with stuff working
+
+
+policy always outputs cartisan action. then inverse kinematics handles converting that into real world
 
 
 
@@ -378,3 +382,5 @@ and x, y axes parallel to the image, z towards object
 gonna create a clean fork of the old thing
 
 so cu
+
+

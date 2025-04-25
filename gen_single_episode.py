@@ -191,12 +191,6 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
         config_dict['observations']['images'][f'{cam.name}_color'] = color_save_kwargs
         config_dict['observations']['images'][f'{cam.name}_depth'] = depth_save_kwargs
 
-    print(f"arm_dof {arm_dof}")
-    action = np.zeros(arm_dof+1)
-    print(f"env.palm_link.get_pose() {env.palm_link.get_pose()}")
-    cartisen_action, quit = scripted_policy.single_trajectory(env,env.palm_link.get_pose(),mode=mode)
-    print(f"cartisen_action {cartisen_action}")
-    print(f"quit {quit}")
     while True:
         action = np.zeros(arm_dof+1)
         cartisen_action, quit = scripted_policy.single_trajectory(env,env.palm_link.get_pose(),mode=mode)
@@ -258,4 +252,4 @@ if __name__ == '__main__':
              headless=False,
              mode="straight",
              manip_obj=None,
-             task_name="hang_mug")
+             task_name="cube_pick")
