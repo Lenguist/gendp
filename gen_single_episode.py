@@ -122,6 +122,7 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
     env.seed(episode_idx)
     env.reset()
     arm_dof = env.arm_dof
+    print(f"arm_dof {arm_dof}")
     
     # Setup viewer and camera
     add_default_scene_light(env.scene, env.renderer)

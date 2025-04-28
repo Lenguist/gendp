@@ -181,25 +181,31 @@ class BaseRLEnv(BaseSimulationEnv, gym.Env):
         self.current_step += 1
 
     def arm_sim_step(self, action: np.ndarray):
-        current_qpos = self.robot.get_qpos()
-        ee_link_last_pose = self.ee_link.get_pose()
+        current_qpos = self.robot.get_qpos()  # shape = robot.dof
         action = np.clip(action, -1, 1)
+
+        # --- compute arm joint velocities & integrate ---
         target_root_velocity = recover_action(action[:6], self.velocity_limit[:6])
         palm_jacobian = self.kinematic_model.compute_end_link_spatial_jacobian(current_qpos[:self.arm_dof])
         arm_qvel = compute_inverse_kinematics(target_root_velocity, palm_jacobian)[:self.arm_dof]
-        arm_qvel = np.clip(arm_qvel, -np.pi / 1, np.pi / 1)
-        arm_qpos = arm_qvel * self.control_time_step + self.robot.get_qpos()[:self.arm_dof]
-        hand_qpos = recover_action(action[6:], self.robot.get_qlimits()[self.arm_dof:])
-        target_qpos = np.concatenate([arm_qpos, hand_qpos])
-        target_qvel = np.zeros_like(target_qpos)
-        target_qvel[:self.arm_dof] = arm_qvel
-        # target_qvel[self.arm_dof:] = [1,-1]
-        self.robot.set_drive_target(target_qpos)
+        arm_qvel = np.clip(arm_qvel, -np.pi, np.pi)
+        arm_qpos = current_qpos[:self.arm_dof] + arm_qvel * self.control_time_step
 
-        for i in range(self.frame_skip):
-            self.robot.set_qf(self.robot.compute_passive_force(external=False, coriolis_and_centrifugal=True))
-            self.scene.step()
-        self.current_step += 1
+        # --- now build the full new qpos vector ---
+        new_qpos = current_qpos.copy()
+
+        # 1) overwrite the 7 arm joints
+        new_qpos[: self.arm_dof] = arm_qpos
+
+        # 2) overwrite the drive_joint for gripper open/close
+        #    action[6] ∈ [‐1,1] → scale into [0,0.85]
+        gripper_val = recover_action(np.array([action[6]]), np.array([[0.0, 0.85]]))[0]
+        new_qpos[self.arm_dof] = gripper_val
+
+        # (3) leave any further mimic joints unchanged in new_qpos)
+
+        # --- send it off ---
+        self.robot.set_drive_target(new_qpos)
 
     #use qoos for action
     def trossen_sim_step(self, action: np.ndarray):

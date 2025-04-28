@@ -403,3 +403,111 @@ gonna create a clean fork of the old thing
 so cu
 
 
+
+got here
+
+
+current_qpos [ 1.06079995e-07  
+               3.91385413e-09  
+               2.84113821e-09 
+               -2.00223238e-09
+               -1.57079637e+00
+               -9.45873935e-12
+               2.52185886e-13]
+
+1x7
+
+where does it come from?
+
+ee_link_last_pose Pose(
+    [-0.27, 0.076003, 0.120501], 
+    [-2.29292e-06, 0.707107, 0.707107, 2.47967e-06])
+
+action [ 1.06079995e-07  
+        3.91385413e-09  
+        2.84113821e-09 
+        -2.00223238e-09
+        -1.00000000e+00 
+        -9.45873935e-12  
+        2.52185886e-13  
+        9.00000000e-02]
+action[:6] [ 1.06079995e-07  3.91385413e-09  2.84113821e-09 -2.00223238e-09
+ -1.00000000e+00 -9.45873935e-12]
+
+
+double check how the inverse kinematic is diffrent for panda
+
+active joing
+
+
+joint1, joint2, join3, join4, join5, joint
+
+
+revise arm_sim_step() to correctly control actions
+only ee_gripper
+
+
+ask hao zou
+
+okay
+
+
+make sure that the cube is palced where it's supposed to be
+
+
+fuck
+
+trained a policy based on this data
+
+do you place the cube
+
+bc we manually intialize the joing poses
+
+have to initialize correctly
+
+only includes the end effector trajectory
+
+for the real world we pick the ciube and ligt and ee_link_last_pose
+
+cube initial poses
+
+so the gripper fine geained control
+
+
+OI
+
+
+
+save q pos
+
+
+
+
+6 arm DOF and gripper joint
+ so action above is size 7
+self.velocity_limit[:6] [[-1  1]
+ [-1  1]
+ [-1  1]
+ [-1  1]
+ [-1  1]
+ [-1  1]]
+Traceback (most recent call last):
+  File "/home/maksymbondarenko/Desktop/gendp/gen_single_episode.py", line 253, in <module>
+    main_env(episode_idx=0,
+  File "/home/maksymbondarenko/Desktop/gendp/gen_single_episode.py", line 207, in main_env
+    obs, reward, done, _ = env.step(action[:arm_dof+1])
+  File "/home/maksymbondarenko/Desktop/gendp/sapien_env/sapien_env/rl_env/base.py", line 283, in step
+    self.rl_step(action)
+  File "/home/maksymbondarenko/Desktop/gendp/sapien_env/sapien_env/rl_env/base.py", line 197, in arm_sim_step
+    hand_qpos = recover_action(action[6:], self.robot.get_qlimits()[self.arm_dof:])
+  File "/home/maksymbondarenko/Desktop/gendp/sapien_env/sapien_env/rl_env/base.py", line 26, in recover_action
+    action = (action + 1) / 2 * (limit[:, 1] - limit[:, 0]) + limit[:, 0]
+ValueError: operands could not be broadcast together with shapes (2,) (0,) 
+(gendp) maksymbondarenko@yunzhu-Lambda-Vector:~/Desktop/gendp$ 
+
+
+
+
+
+
+video generator from image

@@ -63,15 +63,14 @@ def generate_arm_robot_hand_info() -> Dict[str, ArmRobotInfo]:
     xarm6_with_gripper = ArmRobotInfo(path=str(xarm_path / "xarm6_with_gripper.urdf"), hand_dof=0, arm_dof=6,
                                       palm_name="link6", arm_init_qpos=[0, 0, 0, 0, -np.pi / 2, 0])
 
-    # # Added XArm7 entry
-    # xarm7_path = Path("robot/xarm7/")
-    # xarm7 = ArmRobotInfo(
-    #     path=str(xarm7_path / "xarm7.urdf"),
-    #     hand_dof=0,
-    #     arm_dof=7,
-    #     palm_name="link6",
-    #     arm_init_qpos=[0, 0, 0, 0, -np.pi / 2, 0, 0]
-    # )
+    # Added XArm7 entry
+    xarm7 = ArmRobotInfo(
+        path=str("robot/xarm7/xarm7.urdf"),
+        hand_dof=0,
+        arm_dof=7,
+        palm_name="link7",
+        arm_init_qpos=[0, 0, 0, 0, -np.pi / 2, 0, 0]
+    )
     xarm7_with_gripper = ArmRobotInfo(
         path=str("robot/xarm7_with_gripper/xarm7_with_gripper.urdf"),
         hand_dof=2,
@@ -89,7 +88,7 @@ def generate_arm_robot_hand_info() -> Dict[str, ArmRobotInfo]:
         allegro_hand_xarm6_wrist_mounted_face_front=allegro_hand_xarm6_wrist_mounted_face_front,
         allegro_hand_digit_xarm6_wrist_mounted_face_front=allegro_hand_digit_xarm6_wrist_mounted_face_front,
         xarm7_with_gripper=xarm7_with_gripper,
-        # xarm7_with_gripper=xarm7_with_gripper,
+        xarm7=xarm7,
     )
     return info_dict
 

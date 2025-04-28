@@ -33,9 +33,9 @@ class KinHelper():
         elif "panda" in robot_name:
             urdf_path = f"{package_dir}/robot/panda/panda.urdf"
             self.eef_name = 'panda_hand'
-        elif "xarm7_with_gripper" in robot_name:
+        if "xarm7" in robot_name:
             urdf_path = f"{package_dir}/robot/xarm7_with_gripper/xarm7_with_gripper.urdf"
-            self.eef_name = 'link7'
+            self.eef_name = 'link_tcp'
         self.robot_name = robot_name
         # with suppress_stdout(): # suppress pybullet annoying print
         #     self.bullet_robot = p.loadURDF(urdf_path, useFixedBase=True)
@@ -301,7 +301,7 @@ class KinHelper():
         elif 'panda' in self.robot_name:
             active_qmask= np.array([True,True,True,True,True,True,True,True,True])
         elif 'xarm7' in self.robot_name:
-            active_qmask = np.array([True] * 13)  # adjust if needed
+            active_qmask = np.array([True, True, True, True, True, True, True])
         qpos = self.robot_model.compute_inverse_kinematics(link_index=self.sapien_eef_idx, pose=pose, initial_qpos=initial_qpos,active_qmask=active_qmask, eps=1e-3, damp=1e-1)
         # verify ik
         fk_pose = self.compute_fk_sapien_links(qpos[0], [self.sapien_eef_idx])[0]
@@ -370,59 +370,65 @@ def test_kin_helper():
             visualizer.run()
 
 def test_fk():
-    robot_name = 'trossen_vx300s_v3'
-    init_qpos = np.array([0,0,0,0,0,0,0,0])
-    end_qpos = np.array([0, -0.96, 1.16, 0, -0.3, 0, 0.09, -0.09])
-    # fn = '/media/yixuan_2T/diffusion_policy/data/real_aloha_demo/pick_place_cup_v2/episode_1.hdf5'
-    # # fn = '/home/yixuan/general_dp/data/real_aloha_demo/pick_place_cup_v2/episode_2.hdf5'
-    # dict, _ = load_dict_from_hdf5(fn)
-    # qpos = dict['observations']['full_joint_pos'][()]
+
+    robot_name = 'xarm7'
+
+    init_qpos = np.array([0, -45, 0, 30, 0, 75, 0]) * np.pi / 180
+
+    end_qpos = np.array([0, 0, 0, 0, 0, 0, 0])
+
     
+
     kin_helper = KinHelper(robot_name=robot_name, headless=False)
-    START_ARM_POSE = [0, -0.96, 1.16, 0, -0.3, 0, 0.02239, -0.02239]
-    # for i in range(qpos.shape[0]):
-    #     curr_qpos = qpos[i]
+
+    START_ARM_POSE = [0, 0, 0, 0, 0, 0, 0]
+
+
+
     for i in range(100):
+
         curr_qpos = init_qpos + (end_qpos - init_qpos) * i / 100
+
         fk = kin_helper.compute_fk_sapien_links(curr_qpos, [kin_helper.sapien_eef_idx])[0]
-        # fk[:3, 3] +=  np.random.normal(0, 0.005, 3)
+
         fk_euler = transforms3d.euler.mat2euler(fk[:3, :3], axes='sxyz')
-        
-        # init_ik_qpos = qpos[0].copy()
-        # init_ik_qpos[4] = -np.pi/4.0
+
+
+
         if i == 0:
+
             init_ik_qpos = np.array(START_ARM_POSE)
-        # ik_qpos = kin_helper.compute_ik_sapien_post_process(init_ik_qpos, np.array(list(fk[:3, 3]) + list(fk_euler)).astype(np.float32))
+
         ik_qpos = kin_helper.compute_ik_sapien(init_ik_qpos, np.array(list(fk[:3, 3]) + list(fk_euler)).astype(np.float32))
+
         re_fk_pos_mat = kin_helper.compute_fk_sapien_links(ik_qpos, [kin_helper.sapien_eef_idx])[0]
+
         re_fk_euler = transforms3d.euler.mat2euler(re_fk_pos_mat[:3, :3], axes='sxyz')
+
         re_fk_pos = re_fk_pos_mat[:3, 3]
+
         print('re_fk_pos diff:', np.linalg.norm(re_fk_pos - fk[:3, 3]))
+
         print('re_fk_euler diff:', np.linalg.norm(np.array(re_fk_euler) - np.array(fk_euler)))
+
         
-        # ik_qpos = kin_helper.compute_ik_mplib(init_ik_qpos, np.array(list(fk[:3, 3]) + list(fk_euler)).astype(np.float32))
-        # ik_qpos = np.clip(ik_qpos, kin_helper.bullet_ll, kin_helper.bullet_ul)
-        # ik_qpos = kin_helper.compute_ik(init_ik_qpos, np.array(list(fk[:3, 3]) + list(fk_euler)).astype(np.float32))
-        # ik_qpos = np.clip(ik_qpos, kin_helper.bullet_ll, kin_helper.bullet_ul)
-        # if (ik_qpos[:6] - kin_helper.bullet_ll[:6]).min() < 0.0 or \
-        #     (ik_qpos[:6] - kin_helper.bullet_ul[:6]).max() > 0.0:
-        #     raise RuntimeError('ik qpos out of bound')
+
+
+
         init_ik_qpos = ik_qpos.copy()
-        print('fk_euler:', fk_euler)
-        print('gt qpos:', curr_qpos)
-        print('ik qpos:', ik_qpos)
-        print('qpos diff:', np.linalg.norm(ik_qpos[:6] - curr_qpos[:6]))
+
         qpos_diff = np.linalg.norm(ik_qpos[:6] - curr_qpos[:6])
+
         if qpos_diff > 0.01:
+
             warnings.warn('qpos diff too large', RuntimeWarning, stacklevel=2, )
-        
-        # for i in range(len(ik_qpos)):
-        #     p.resetJointState(kin_helper.bullet_robot, kin_helper.bullet_active_joints[i], ik_qpos[i])
-        
-        print()
-                
+
+
+
         time.sleep(0.1)
 
+
+
 if __name__ == "__main__":
-    test_kin_helper()
-    # test_fk()
+
+    test_fk()
