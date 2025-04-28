@@ -253,7 +253,7 @@ if __name__ == '__main__':
     dataset_dir = os.path.join('datasets', datetime.now().strftime('%Y%m%d_%H%M%S'))
     main_env(episode_idx=0,
              dataset_dir=dataset_dir,
-             headless=True,
+             headless=False,
              mode="straight",
              manip_obj=None,
              task_name="cube_pick")

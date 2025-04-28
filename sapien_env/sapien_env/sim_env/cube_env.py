@@ -21,7 +21,7 @@ class CubePickEnv(BaseSimulationEnv):
         # 3) Add a table
         self.table = self.create_table(
             table_height=0.6,
-            table_half_size=[0.35, 0.7, 0.025]
+            table_half_size=[0.5, 0.7, 0.025]
         )
 
         # 4) Build a 0.06 m white cube

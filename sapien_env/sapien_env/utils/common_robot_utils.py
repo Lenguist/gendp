@@ -76,7 +76,7 @@ def generate_arm_robot_hand_info() -> Dict[str, ArmRobotInfo]:
         hand_dof=2,
         arm_dof=7,
         palm_name="link_tcp",
-        arm_init_qpos=[0, 0, 0, 0, -np.pi / 2, 0, 0]
+        arm_init_qpos=list(np.array([0, -45, 0, 30, 0, 75, 0]) * np.pi / 180)
     )
 
     info_dict = dict(
