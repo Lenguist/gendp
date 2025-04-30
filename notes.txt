@@ -1,3 +1,11 @@
+qpos goes from 0 to 0.8 for gripper
+
+make sure gripper can close and go run
+
+
+
+
+
 Goal: move this robot so it can retrieve the cube
 
 cartisen_action we get from policy

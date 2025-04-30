@@ -14,6 +14,8 @@ from gendp.common.data_utils import save_dict_to_hdf5
 from gendp.common.kinematics_utils import KinHelper
 from datetime import datetime
 
+import time
+
 def stack_dict(dic):
     # stack list of numpy arrays into a single numpy array inside a nested dict
     for key, item in dic.items():
@@ -39,62 +41,13 @@ def transform_action_from_world_to_robot(action : np.ndarray, pose : sapien.Pose
     action_robot[6] = action[6]
     return action_robot
 
-def task_to_cfg(task, manip_obj=None):
-    if task == 'hang_mug':
-        cfg = OmegaConf.create(
-            {
-                '_target_': 'sapien_env.rl_env.hang_mug_env.HangMugRLEnv',
-                'use_gui': True,
-                'robot_name': 'panda',
-                'frame_skip': 10,
-                'use_visual_obs': False,
-                'manip_obj': 'nescafe_mug' if manip_obj is None else manip_obj,
-            }
-        )
-        policy_cfg = OmegaConf.create(
-            {
-                '_target_': 'sapien_env.teleop.hang_mug_scripted_policy.SingleArmPolicy',
-            }
-        )
-    elif task == 'mug_collect':
-        cfg = OmegaConf.create(
-            {
-                '_target_': 'sapien_env.rl_env.mug_collect_env.MugCollectRLEnv',
-                'use_gui': True,
-                'robot_name': 'panda',
-                'frame_skip': 10,
-                'use_visual_obs': False,
-                'manip_obj': 'pepsi' if manip_obj is None else manip_obj,
-                'randomness_level': 'half'
-            }
-        )
-        policy_cfg = OmegaConf.create(
-            {
-                '_target_': 'sapien_env.teleop.mug_collect_scripted_policy.SingleArmPolicy',
-            }
-        )
-    elif task == 'pen_insertion':
-        cfg = OmegaConf.create(
-            {
-                '_target_': 'sapien_env.rl_env.pen_insertion_env.PenInsertionRLEnv',
-                'use_gui': True,
-                'robot_name': 'panda',
-                'frame_skip': 10,
-                'use_visual_obs': False,
-                'manip_obj': 'pencil' if manip_obj is None else manip_obj,
-            }
-        )
-        policy_cfg = OmegaConf.create(
-            {
-                '_target_': 'sapien_env.teleop.pen_insertion_scripted_policy.SingleArmPolicy',
-            }
-        )
-    elif task == 'cube_pick':
+def task_to_cfg(task, robot_name, manip_obj=None):
+    if task == 'cube_pick':
         cfg = OmegaConf.create({
             '_target_': 'sapien_env.rl_env.cube_pick_env.CubePickRLEnv',
             'use_gui': True,
             'frame_skip': 10,
-            'robot_name': "xarm7_with_gripper", # "xarm7_with_gripper",
+            'robot_name': robot_name, # "xarm7_with_gripper",
             'use_visual_obs': False,
         })
         # reuse an existing scripted policy so it just runs some arm motion
@@ -167,9 +120,8 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
     print(f"Difference (IK_qpos – initial_qpos): {np.round(diff,3)}\n")
     # ────────────────────────────────────────────────────────────────────────
     
-    # Setup viewer and camera
     add_default_scene_light(env.scene, env.renderer)
-    gui = GUIBase(env.scene, env.renderer,headless=headless)
+    gui = GUIBase(env.scene, env.renderer, headless=headless)
     for name, params in YX_TABLE_TOP_CAMERAS.items():
         if 'rotation' in params:
             gui.create_camera_from_pos_rot(**params)
@@ -180,169 +132,115 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
         gui.viewer.set_camera_xyz(x=0, y=0.5, z=0.5)
     scene = env.scene
     scene.step()
-    
-    timesteps = 0
+
     dataset_path = os.path.join(dataset_dir, f'episode_{episode_idx}.hdf5')
-    
     scripted_policy = hydra.utils.instantiate(policy_cfg)
-    
-    # set up data saving hyperparameters
     init_poses = env.get_init_poses()
+
     data_dict = {
-        'observations': 
-            {'joint_pos': [],
-             'joint_vel': [],
-             'full_joint_pos': [], # this is to compute FK
-             'robot_base_pose_in_world': [],
-             'ee_pos': [],
-             'ee_vel': [],
-            #  'finger_pos': {},
-             'images': {},},
+        'observations': {
+            'joint_pos': [],
+            'joint_vel': [],
+            'full_joint_pos': [],
+            'robot_base_pose_in_world': [],
+            'ee_pos': [],
+            'ee_vel': [],
+            'images': {},
+        },
         'joint_action': [],
         'cartesian_action': [],
-        'info':
-            {'init_poses': init_poses}
+        'info': {'init_poses': init_poses}
     }
-    # finger_names = ['left_finger_link','right_finger_link']
-    # for finger in finger_names:
-    #     data_dict['observations']['finger_pos'][finger] = []
+
     cams = gui.cams
     for cam in cams:
-        data_dict['observations']['images'][f'{cam.name}_color'] = []
-        data_dict['observations']['images'][f'{cam.name}_depth'] = []
-        data_dict['observations']['images'][f'{cam.name}_intrinsic'] = []
-        data_dict['observations']['images'][f'{cam.name}_extrinsic'] = []
-    attr_dict = {
-        'sim': True,
-    }
-    config_dict = {
-        'observations':
-            {
-                'images': {}
-            }
-    }
-    for cam_idx, cam in enumerate(gui.cams):
+        for typ in ['color', 'depth', 'intrinsic', 'extrinsic']:
+            data_dict['observations']['images'][f'{cam.name}_{typ}'] = []
+
+    attr_dict = {'sim': True}
+    config_dict = {'observations': {'images': {}}}
+    for cam in gui.cams:
         color_save_kwargs = {
-            'chunks': (1, cam.height, cam.width, 3), # (1, 480, 640, 3)
-            'compression': 'gzip',
-            'compression_opts': 9,
-            'dtype': 'uint8',
-        }
+            'chunks': (1, cam.height, cam.width, 3),
+            'compression': 'gzip', 'compression_opts': 9, 'dtype': 'uint8'}
         depth_save_kwargs = {
-            'chunks': (1, cam.height, cam.width), # (1, 480, 640)
-            'compression': 'gzip',
-            'compression_opts': 9,
-            'dtype': 'uint16',
-        }
+            'chunks': (1, cam.height, cam.width),
+            'compression': 'gzip', 'compression_opts': 9, 'dtype': 'uint16'}
         config_dict['observations']['images'][f'{cam.name}_color'] = color_save_kwargs
         config_dict['observations']['images'][f'{cam.name}_depth'] = depth_save_kwargs
 
+    timesteps = 0
+    print("\n=== BEGINNING ROLLOUT ===\n")
     while True:
-        print(f"\n==== STEP {timesteps} ====")
-        # re-initialize action each step
-        action = np.zeros(arm_dof+1)
-        # ─── Before control update ─────────────────────────────────────
-        # 1) EE current pose in world
-        ee_pose_W = env.palm_link.get_pose().to_transformation_matrix()
-        pos_W = np.round(ee_pose_W[:3,3], 3)
-        rpy_W = np.round(transforms3d.euler.mat2euler(ee_pose_W[:3,:3], axes='sxyz'), 3)
-        print("Initial:")
-        print(f"  EE pose W: pos={pos_W}, rpy={rpy_W}")
+        action = np.zeros(arm_dof + 1)
+        cartisen_action, quit = scripted_policy.single_trajectory(env, env.palm_link.get_pose(), mode=mode)
 
-        # 2) EE in robot frame
-        base_W = env.robot.get_pose().to_transformation_matrix()
-        ee_pose_B = np.linalg.inv(base_W) @ ee_pose_W
-        pos_B = np.round(ee_pose_B[:3,3], 3)
-        rpy_B = np.round(transforms3d.euler.mat2euler(ee_pose_B[:3,:3], axes='sxyz'), 3)
-        print(f"  EE pose B: pos={pos_B}, rpy={rpy_B}")
+        cube_pos = np.round(env.cube.get_pose().p, 3)
+        ee_world = np.round(env.palm_link.get_pose().p, 3)
+        desired_ee_world = np.round(cartisen_action[:3], 3)
 
-        # 3) qpos from env
-        qpos_env = np.round(env.robot.get_qpos(), 3)
-        print(f"  qpos_env: {qpos_env}")
+        print(f"[Step {timesteps}] Cube position (world): {cube_pos} (3x1)")
+        print(f"[Step {timesteps}] EE position (world): {ee_world} (3x1)")
+        print(f"[Step {timesteps}] Target EE position (world): {desired_ee_world} (3x1)")
 
-        # 4) IK‐computed qpos for that same EE pose
-        target_cart_B = np.concatenate([pos_B, rpy_B, [qpos_env[arm_dof]]])
-        qpos_ik_init = np.round(kin_helper.compute_ik_sapien(qpos_env, target_cart_B), 3)
-        print(f"  qpos_ik (hold current EE): {qpos_ik_init}")
-
-        # 5) difference
-        diff_init = np.round(qpos_ik_init - qpos_env, 3)
-        print(f"  Δqpos (ik − env): {diff_init}\n")
-
-        # ─── Compute new action ─────────────────────────────────────────
-        cartisen_action, quit = scripted_policy.single_trajectory(
-            env, env.palm_link.get_pose(), mode=mode
-        )
-        print("Next step requested:")
-        print(f"  cartisen_action (W): {np.round(cartisen_action, 3)}")
-
-        # 6) Desired EE in W + B
-        des_W = np.round(cartisen_action[:3], 3)
-        print(f"  Desired EE pos W: {des_W}")
-        des_B = np.round(transform_action_from_world_to_robot(
+        cartisen_action_in_rob = transform_action_from_world_to_robot(
             cartisen_action, env.robot.get_pose()
-        )[:3], 3)
-        print(f"  Desired EE pos B: {des_B}")
-
-        # 7) IK → qpos_target
-        target_cart_B = np.concatenate([
-            des_B,
-            np.round(cartisen_action[3:6], 3),
-            [cartisen_action[6]]
-        ])
-        qpos_target = np.round(kin_helper.compute_ik_sapien(qpos_env, target_cart_B), 3)
-        print(f"  qpos_target (IK): {qpos_target}\n")
+        )
+        ee_robot_target = np.round(cartisen_action_in_rob[:3], 3)
+        print(f"[Step {timesteps}] Target EE position (robot): {ee_robot_target} (3x1)")
 
         if quit:
+            print("Exiting rollout loop.")
             break
 
-        # existing sim‐step
-        action[:arm_dof]    = qpos_target[:arm_dof]
-        action[arm_dof:]    = cartisen_action[6]
-        obs, reward, done, _ = env.step(action[:arm_dof+1])
-        rgbs, depths        = gui.render(depth=True)
+        ik_result = kin_helper.compute_ik_sapien(env.robot.get_qpos()[:], cartisen_action_in_rob)
+        print(f"[Step {timesteps}] IK result (1x{len(ik_result)}): {np.round(ik_result, 3)}")
 
-        # ─── After env.step ───────────────────────────────────────────────
-        qpos_post = np.round(env.robot.get_qpos(), 3)
-        delta_post = np.round(qpos_post - qpos_target, 3)
-        print("After env.step():")
-        print(f"  qpos_post: {qpos_post}")
-        print(f"  Δqpos post-step (post − target): {delta_post}")
+        action[:arm_dof] = ik_result[:arm_dof]
+        action[arm_dof] = cartisen_action_in_rob[6]
+        print(f"[Step {timesteps}] Final action (1x{len(action)}): {np.round(action, 3)}")
 
-        # your existing data collection:
-        data_dict['observations']['joint_pos'].append(env.robot.get_qpos()[:-1])
-        data_dict['observations']['joint_vel'].append(env.robot.get_qvel()[:-1])
-        data_dict['observations']['full_joint_pos'].append(env.robot.get_qpos())
-        data_dict['observations']['robot_base_pose_in_world'].append(
-            env.robot.get_pose().to_transformation_matrix())
+        obs, reward, done, _ = env.step(action[:arm_dof + 1])
+        rgbs, depths = gui.render(depth=True)
+
+        qpos = env.robot.get_qpos()
+        qvel = env.robot.get_qvel()
+        data_dict['observations']['joint_pos'].append(qpos[:-1])
+        data_dict['observations']['joint_vel'].append(qvel[:-1])
+        data_dict['observations']['full_joint_pos'].append(qpos)
+        data_dict['observations']['robot_base_pose_in_world'].append(env.robot.get_pose().to_transformation_matrix())
+
         ee_translation = env.palm_link.get_pose().p
-        ee_rotation    = transforms3d.euler.quat2euler(
-            env.palm_link.get_pose().q, axes='sxyz')
-        ee_gripper     = env.robot.get_qpos()[arm_dof]
-        ee_pos         = np.concatenate([ee_translation, ee_rotation, [ee_gripper]])
-        ee_vel         = np.concatenate([
-            env.palm_link.get_velocity(),
-            env.palm_link.get_angular_velocity(),
-            env.robot.get_qvel()[arm_dof:arm_dof+1]
-        ])
+        ee_rotation = transforms3d.euler.quat2euler(env.palm_link.get_pose().q, axes='sxyz')
+        ee_gripper = qpos[arm_dof]
+        ee_pos = np.concatenate([ee_translation, ee_rotation, [ee_gripper]])
+        ee_vel = np.concatenate([env.palm_link.get_velocity(),
+                                 env.palm_link.get_angular_velocity(),
+                                 qvel[arm_dof:arm_dof + 1]])
         data_dict['observations']['ee_pos'].append(ee_pos)
         data_dict['observations']['ee_vel'].append(ee_vel)
         data_dict['joint_action'].append(action.copy())
         data_dict['cartesian_action'].append(cartisen_action.copy())
+
+        print(f"[Step {timesteps}] EE pos (1x7): {np.round(ee_pos, 3)}")
+        print(f"[Step {timesteps}] EE vel (1x7): {np.round(ee_vel, 3)}\n")
+
         for cam_idx, cam in enumerate(gui.cams):
             data_dict['observations']['images'][f'{cam.name}_color'].append(rgbs[cam_idx])
             data_dict['observations']['images'][f'{cam.name}_depth'].append(depths[cam_idx])
-            data_dict['observations']['images'][f'{cam.name}_intrinsic'].append(
-                cam.get_intrinsic_matrix())
-            data_dict['observations']['images'][f'{cam.name}_extrinsic'].append(
-                cam.get_extrinsic_matrix())
+            data_dict['observations']['images'][f'{cam.name}_intrinsic'].append(cam.get_intrinsic_matrix())
+            data_dict['observations']['images'][f'{cam.name}_extrinsic'].append(cam.get_extrinsic_matrix())
 
         timesteps += 1
 
     if reward < 1:
-        print("Failed at episode {}".format(episode_idx))
+        print(f"Failed at episode {episode_idx} (reward: {reward})")
+
+    print(f"Total timesteps: {timesteps}")
     data_dict = stack_dict(data_dict)
     save_dict_to_hdf5(data_dict, config_dict, dataset_path, attr_dict=attr_dict)
+    print(f"Saved dataset to: {dataset_path}")
+
     if not gui.headless:
         gui.viewer.close()
         cv2.destroyAllWindows()
@@ -366,3 +264,6 @@ if __name__ == '__main__':
              mode="straight",
              manip_obj=None,
              task_name="cube_pick")
+
+
+

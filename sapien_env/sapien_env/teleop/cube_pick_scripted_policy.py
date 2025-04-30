@@ -7,8 +7,12 @@ from sapien_env.rl_env.cube_pick_env import CubePickRLEnv
 
 class SingleArmPolicy:
     """
-    Scripted straight-line pick policy for CubePickRLEnv.
+    Scripted straight-line pick policy for CubePickRLEnv, with a 6‐joint gripper [0.0–0.8].
     """
+    # gripper joint targets
+    GRIP_OPEN = 0.8
+    GRIP_CLOSED = 0.1
+
     def __init__(self, inject_noise=False):
         self.inject_noise = inject_noise
         self.step_count = 0
@@ -51,34 +55,37 @@ class SingleArmPolicy:
 
         self.step_count += 1
         # Build action: [xyz(3), euler(3), gripper(1)]
-        action = np.zeros(7)
+        action = np.zeros(7, dtype=np.float32)
         euler = transforms3d.euler.quat2euler(quat, axes='sxyz')
         action[0:3] = xyz
         action[3:6] = euler
         action[6] = gripper
         return action, False
 
-# this will be different depending on robot gripper size
     def generate_trajectory(self, env: CubePickRLEnv, ee_link_pose, mode='straight'):
         # world pose of cube
         cube_pose = env.cube.get_pose()
         # Define key poses
         pre_grasp = cube_pose.p + np.array([0.0, 0.0, 0.12])
-        grasp = cube_pose.p + np.array([0.0, 0.0, 0.05])
-        leave = cube_pose.p + np.array([0.0, 0.0, 0.12])
+        grasp     = cube_pose.p + np.array([0.0, 0.0, 0.02])
+        leave     = cube_pose.p + np.array([0.0, 0.0, 0.30])
         # Keep orientation constant (current ee orientation)
         quat = ee_link_pose.q
-        # Trajectory waypoints (t, xyz, quat, gripper)
+
+        # Shortcut for gripper values
+        open_g  = SingleArmPolicy.GRIP_OPEN
+        closed_g = SingleArmPolicy.GRIP_CLOSED
+
         if mode == 'straight':
             self.trajectory = [
-                {'t': 0,   'xyz': ee_link_pose.p, 'quat': quat, 'gripper': 0.09},
-                {'t': 20,  'xyz': pre_grasp,       'quat': quat, 'gripper': 0.09},
-                {'t': 60,  'xyz': grasp,           'quat': quat, 'gripper': 0.09},
-                {'t': 80,  'xyz': grasp,           'quat': quat, 'gripper': 0.00},
-                {'t': 100, 'xyz': grasp,           'quat': quat, 'gripper': 0.00},
-                {'t': 140, 'xyz': pre_grasp,       'quat': quat, 'gripper': 0.00},
-                {'t': 200, 'xyz': leave,           'quat': quat, 'gripper': 0.00},
-                {'t': 220, 'xyz': leave,           'quat': quat, 'gripper': 0.00},
+                {'t':   0, 'xyz': ee_link_pose.p, 'quat': quat, 'gripper': open_g},
+                {'t':  20, 'xyz': pre_grasp,       'quat': quat, 'gripper': open_g},
+                {'t':  60, 'xyz': grasp,           'quat': quat, 'gripper': open_g},
+                {'t':  80, 'xyz': grasp,           'quat': quat, 'gripper': closed_g},
+                {'t': 100, 'xyz': grasp,           'quat': quat, 'gripper': closed_g},
+                {'t': 140, 'xyz': pre_grasp,       'quat': quat, 'gripper': closed_g},
+                {'t': 200, 'xyz': leave,           'quat': quat, 'gripper': closed_g},
+                {'t': 220, 'xyz': leave,           'quat': quat, 'gripper': closed_g},
             ]
         else:
             raise RuntimeError(f"Mode '{mode}' not implemented for cube pick.")

@@ -149,7 +149,7 @@ class BaseRLEnv(BaseSimulationEnv, gym.Env):
         self.robot_collision_links = [link for link in self.robot.get_links() if len(link.get_collision_shapes()) > 0]
         self.control_time_step = self.scene.get_timestep() * self.frame_skip
 
-        self.pid = PIDController(1, 0.0, 0.0, self.control_time_step, [-0.2, 0.2])
+        self.pid = PIDController(3, 0.0, 0.0, self.control_time_step, [-0.2, 0.2])
         # Choose different step function
         if self.is_robot_free:
             self.rl_step = self.free_sim_step
@@ -191,9 +191,10 @@ class BaseRLEnv(BaseSimulationEnv, gym.Env):
         target_qpos = current_qpos.copy()
         # 3a) Arm joints
         target_qpos[: self.arm_dof] = action[: self.arm_dof]
-        # 3b) Gripper joints: set every remaining joint to the gripper value
-        gripper_cmd = np.clip(action[self.arm_dof], 0.0, 0.85)
-        target_qpos[self.arm_dof :] = gripper_cmd
+        # 3b) Gripper: map action scalar to [0, 0.8] and apply to *all* gripper joints
+        gripper_cmd = np.clip(action[self.arm_dof], 0.0, 0.8)
+        # assume the next 6 joints are the gripper fingers/mimics
+        target_qpos[self.arm_dof : self.arm_dof + 6] = gripper_cmd
 
         # 4) PID on the **full** joint error
         delta_q = target_qpos - current_qpos
