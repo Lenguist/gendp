@@ -94,7 +94,7 @@ def task_to_cfg(task, manip_obj=None):
             '_target_': 'sapien_env.rl_env.cube_pick_env.CubePickRLEnv',
             'use_gui': True,
             'frame_skip': 10,
-            'robot_name': "xarm7_with_gripper",
+            'robot_name': "xarm7_with_gripper", # "xarm7_with_gripper",
             'use_visual_obs': False,
         })
         # reuse an existing scripted policy so it just runs some arm motion
@@ -108,7 +108,7 @@ def task_to_cfg(task, manip_obj=None):
 def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None):
     # initialize env
     os.system(f'mkdir -p {dataset_dir}')
-    robot_name = "xarm7_with_gripper"
+    robot_name = "xarm7_with_gripper" # "xarm7_with_gripper"
     print(f"USING ROBOT {robot_name}")
     kin_helper = KinHelper(robot_name=robot_name)
 
@@ -197,11 +197,29 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
     while True:
         action = np.zeros(arm_dof+1)
         cartisen_action, quit = scripted_policy.single_trajectory(env,env.palm_link.get_pose(),mode=mode)
+        print(f"cartisen_action {cartisen_action}")
         # transform cartisen_action from robot to world frame
+        # ─── NEW PRINTS ─────────────────────────────────────────────────────────
+        # 1) Cube world‐position
+        cube_pos = env.cube.get_pose().p
+        print(f"[Step {timesteps}] Cube position (world): {np.round(cube_pos,2)}")
+
+        # 2) Current end‐effector world‐position
+        curr_ee = env.palm_link.get_pose().p
+        print(f"[Step {timesteps}] Current EE position (world): {np.round(curr_ee, 2)}")
+
+        # 3) Target EE position in world frame (from policy)
+        print(f"[Step {timesteps}] Desired EE position (world): {np.round(cartisen_action[:3],2)}")
+
+        # … now transform into robot frame …
+        cartisen_action_in_rob = transform_action_from_world_to_robot(
+            cartisen_action, env.robot.get_pose()
+        )
+        # 4) And in the robot’s local frame
+        print(f"[Step {timesteps}] Desired EE position (robot frame): {np.round(cartisen_action_in_rob[:3], 2)}")
+        # ────────────────────────────────────────────────────────────────────────
         if quit:
             break
-        cartisen_action_in_rob = transform_action_from_world_to_robot(cartisen_action,env.robot.get_pose())
-        print("got here")
         action[:arm_dof] = kin_helper.compute_ik_sapien(env.robot.get_qpos()[:],cartisen_action_in_rob)[:arm_dof]
         action[arm_dof:] = cartisen_action_in_rob[6]
         # print(action)
@@ -253,7 +271,7 @@ if __name__ == '__main__':
     dataset_dir = os.path.join('datasets', datetime.now().strftime('%Y%m%d_%H%M%S'))
     main_env(episode_idx=0,
              dataset_dir=dataset_dir,
-             headless=False,
+             headless=True,
              mode="straight",
              manip_obj=None,
              task_name="cube_pick")

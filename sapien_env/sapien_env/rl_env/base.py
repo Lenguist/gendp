@@ -181,31 +181,40 @@ class BaseRLEnv(BaseSimulationEnv, gym.Env):
         self.current_step += 1
 
     def arm_sim_step(self, action: np.ndarray):
-        current_qpos = self.robot.get_qpos()  # shape = robot.dof
-        action = np.clip(action, -1, 1)
+        # 1) Clip the normalized action
+        action = np.clip(action, -1.0, 1.0)
 
-        # --- compute arm joint velocities & integrate ---
-        target_root_velocity = recover_action(action[:6], self.velocity_limit[:6])
-        palm_jacobian = self.kinematic_model.compute_end_link_spatial_jacobian(current_qpos[:self.arm_dof])
-        arm_qvel = compute_inverse_kinematics(target_root_velocity, palm_jacobian)[:self.arm_dof]
-        arm_qvel = np.clip(arm_qvel, -np.pi, np.pi)
-        arm_qpos = current_qpos[:self.arm_dof] + arm_qvel * self.control_time_step
+        # 2) Read the current full joint state (arm + gripper + mimics)
+        current_qpos = self.robot.get_qpos()  # shape = (robot.dof,)
 
-        # --- now build the full new qpos vector ---
-        new_qpos = current_qpos.copy()
+        # 3) Build a full-length target qpos
+        target_qpos = current_qpos.copy()
+        # 3a) Arm joints
+        target_qpos[: self.arm_dof] = action[: self.arm_dof]
+        # 3b) Gripper joints: set every remaining joint to the gripper value
+        gripper_cmd = np.clip(action[self.arm_dof], 0.0, 0.85)
+        target_qpos[self.arm_dof :] = gripper_cmd
 
-        # 1) overwrite the 7 arm joints
-        new_qpos[: self.arm_dof] = arm_qpos
+        # 4) PID on the **full** joint error
+        delta_q = target_qpos - current_qpos
+        pid_delta = self.pid.control(delta_q)
+        drive_target = current_qpos + pid_delta
 
-        # 2) overwrite the drive_joint for gripper open/close
-        #    action[6] ∈ [‐1,1] → scale into [0,0.85]
-        gripper_val = recover_action(np.array([action[6]]), np.array([[0.0, 0.85]]))[0]
-        new_qpos[self.arm_dof] = gripper_val
+        # 5) Send the full-length drive target
+        self.robot.set_drive_target(drive_target)
 
-        # (3) leave any further mimic joints unchanged in new_qpos)
+        # 6) Advance the simulation
+        for _ in range(self.frame_skip):
+            self.robot.set_qf(
+                self.robot.compute_passive_force(
+                    external=False, coriolis_and_centrifugal=False
+                )
+            )
+            self.scene.step()
 
-        # --- send it off ---
-        self.robot.set_drive_target(new_qpos)
+        # 7) Bump the step counter
+        self.current_step += 1
+
 
     #use qoos for action
     def trossen_sim_step(self, action: np.ndarray):

@@ -63,9 +63,9 @@ class SingleArmPolicy:
         # world pose of cube
         cube_pose = env.cube.get_pose()
         # Define key poses
-        pre_grasp = cube_pose.p + np.array([0.0, 0.0, 0.2])
-        grasp = cube_pose.p + np.array([0.0, 0.0, 0.1])
-        leave = cube_pose.p + np.array([0.0, 0.0, 0.3])
+        pre_grasp = cube_pose.p + np.array([0.0, 0.0, 0.12])
+        grasp = cube_pose.p + np.array([0.0, 0.0, 0.05])
+        leave = cube_pose.p + np.array([0.0, 0.0, 0.12])
         # Keep orientation constant (current ee orientation)
         quat = ee_link_pose.q
         # Trajectory waypoints (t, xyz, quat, gripper)
