@@ -149,7 +149,7 @@ class BaseRLEnv(BaseSimulationEnv, gym.Env):
         self.robot_collision_links = [link for link in self.robot.get_links() if len(link.get_collision_shapes()) > 0]
         self.control_time_step = self.scene.get_timestep() * self.frame_skip
 
-        self.pid = PIDController(3, 0.0, 0.0, self.control_time_step, [-0.2, 0.2])
+        self.pid = PIDController(4, 0.0, 0.0, self.control_time_step, [-0.2, 0.2])
         # Choose different step function
         if self.is_robot_free:
             self.rl_step = self.free_sim_step
@@ -181,30 +181,43 @@ class BaseRLEnv(BaseSimulationEnv, gym.Env):
         self.current_step += 1
 
     def arm_sim_step(self, action: np.ndarray):
-        # 1) Clip the normalized action
+        # 1) Clip normalized action
         action = np.clip(action, -1.0, 1.0)
 
-        # 2) Read the current full joint state (arm + gripper + mimics)
-        current_qpos = self.robot.get_qpos()  # shape = (robot.dof,)
+        # 2) Read current joint state
+        current_qpos = self.robot.get_qpos()
 
-        # 3) Build a full-length target qpos
+        # 3) Build target qpos
         target_qpos = current_qpos.copy()
-        # 3a) Arm joints
-        target_qpos[: self.arm_dof] = action[: self.arm_dof]
-        # 3b) Gripper: map action scalar to [0, 0.8] and apply to *all* gripper joints
+        target_qpos[:self.arm_dof] = action[:self.arm_dof]
         gripper_cmd = np.clip(action[self.arm_dof], 0.0, 0.8)
-        # assume the next 6 joints are the gripper fingers/mimics
-        target_qpos[self.arm_dof : self.arm_dof + 6] = gripper_cmd
+        target_qpos[self.arm_dof:self.arm_dof + 6] = gripper_cmd  # direct set
 
-        # 4) PID on the **full** joint error
-        delta_q = target_qpos - current_qpos
-        pid_delta = self.pid.control(delta_q)
-        drive_target = current_qpos + pid_delta
+        # 4) PID control for arm only
+        delta_q_arm = target_qpos[:self.arm_dof] - current_qpos[:self.arm_dof]
+        pid_delta = self.pid.control(delta_q_arm)
+        drive_target = current_qpos.copy()
+        drive_target[:self.arm_dof] += pid_delta
+        drive_target[self.arm_dof:self.arm_dof + 6] = gripper_cmd  # direct set
 
-        # 5) Send the full-length drive target
+        # 5) Debug print
+        print("\n=== JOINT DEBUG INFO ===")
+        joints = self.robot.get_active_joints()
+        for i in range(len(joints)):
+            joint_name = joints[i].get_name()
+            target = drive_target[i]
+            current = current_qpos[i]
+            pid_out = pid_delta[i] if i < self.arm_dof else 0.0
+            print(f"[{i}] {joint_name:<25} | "
+                f"Current: {current: .4f} | "
+                f"Target:  {target: .4f} | "
+                f"PID out: {pid_out: .4f}")
+        print("=========================\n")
+
+        # 6) Apply drive target
         self.robot.set_drive_target(drive_target)
 
-        # 6) Advance the simulation
+        # 7) Step sim
         for _ in range(self.frame_skip):
             self.robot.set_qf(
                 self.robot.compute_passive_force(
@@ -213,7 +226,6 @@ class BaseRLEnv(BaseSimulationEnv, gym.Env):
             )
             self.scene.step()
 
-        # 7) Bump the step counter
         self.current_step += 1
 
 

@@ -13,6 +13,7 @@ from sapien_env.gui.gui_base import GUIBase, DEFAULT_TABLE_TOP_CAMERAS, YX_TABLE
 from gendp.common.data_utils import save_dict_to_hdf5
 from gendp.common.kinematics_utils import KinHelper
 from datetime import datetime
+import csv
 
 def stack_dict(dic):
     # stack list of numpy arrays into a single numpy array inside a nested dict
@@ -182,6 +183,19 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
     scene.step()
     
     timesteps = 0
+
+    csv_log_path = os.path.join(dataset_dir, f'log_{episode_idx}.csv')
+    csv_file = open(csv_log_path, mode='w', newline='')
+    writer = csv.writer(csv_file)
+    writer.writerow([
+        "timestep",
+        "ee_pos_world_x", "ee_pos_world_y", "ee_pos_world_z",
+        "ee_rpy_world_r", "ee_rpy_world_p", "ee_rpy_world_y",
+        "qpos_env", "qpos_ik", "delta_ik",
+        "desired_ee_pos_world_x", "desired_ee_pos_world_y", "desired_ee_pos_world_z",
+        "qpos_target", "qpos_post", "delta_post"
+    ])
+
     dataset_path = os.path.join(dataset_dir, f'episode_{episode_idx}.hdf5')
     
     scripted_policy = hydra.utils.instantiate(policy_cfg)
@@ -237,7 +251,7 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
         config_dict['observations']['images'][f'{cam.name}_color'] = color_save_kwargs
         config_dict['observations']['images'][f'{cam.name}_depth'] = depth_save_kwargs
 
-    while True:
+    while timesteps < 300:
         print(f"\n==== STEP {timesteps} ====")
         # re-initialize action each step
         action = np.zeros(arm_dof+1)
@@ -337,6 +351,18 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
             data_dict['observations']['images'][f'{cam.name}_extrinsic'].append(
                 cam.get_extrinsic_matrix())
 
+        writer.writerow([
+                            timesteps,
+                            *pos_W, *rpy_W,
+                            qpos_env.tolist(),
+                            qpos_ik_init.tolist(),
+                            diff_init.tolist(),
+                            *des_W,
+                            qpos_target.tolist(),
+                            qpos_post.tolist(),
+                            delta_post.tolist()
+                        ])
+
         timesteps += 1
 
     if reward < 1:
@@ -346,6 +372,7 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
     if not gui.headless:
         gui.viewer.close()
         cv2.destroyAllWindows()
+    csv_file.close()
     env.close()
 
 if __name__ == '__main__':
