@@ -305,7 +305,8 @@ class KinHelper():
         # print("inside compute_ik now")
         qpos = self.robot_model.compute_inverse_kinematics(link_index=self.sapien_eef_idx,
                                                            pose=pose, 
-                                                           initial_qpos=initial_qpos,active_qmask=active_qmask, 
+                                                           initial_qpos=initial_qpos,
+                                                           active_qmask=active_qmask, 
                                                            eps=1e-3, 
                                                            damp=1e-1)
         # print(f"qpos {qpos} given pose {pose}")

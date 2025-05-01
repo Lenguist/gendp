@@ -1,3 +1,9 @@
+update at lest 10 times per second
+
+
+
+
+
 qpos goes from 0 to 0.8 for gripper
 
 make sure gripper can close and go run

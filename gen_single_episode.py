@@ -123,21 +123,21 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
     env.seed(episode_idx)
     obs, _ = env.reset(), None
     arm_dof = env.arm_dof
-    print(f"arm_dof = {arm_dof}\n")
+    # print(f"arm_dof = {arm_dof}\n")
 
     # ─── INITIAL WORLD‐FRAME STATES ────────────────────────────────────────
     base_pose_W = env.robot.get_pose().to_transformation_matrix()
     cube_pose_W = env.cube.get_pose().to_transformation_matrix()
     ee_pose_W   = env.palm_link.get_pose().to_transformation_matrix()
 
-    print("### World‐frame (W) ###")
-    print(f"  Robot base position W: {np.round(base_pose_W[:3,3],3)}")
-    print(f"  Cube        position W: {np.round(cube_pose_W[:3,3],3)}")
-    print(f"  EE          position W: {np.round(ee_pose_W[:3,3],3)}\n")
+    # print("### World‐frame (W) ###")
+    # print(f"  Robot base position W: {np.round(base_pose_W[:3,3],3)}")
+    # print(f"  Cube        position W: {np.round(cube_pose_W[:3,3],3)}")
+    # print(f"  EE          position W: {np.round(ee_pose_W[:3,3],3)}\n")
 
-    # ─── TRANSFORM FORMULA ─────────────────────────────────────────────────
-    print("Transformation formula to robot frame (B):")
-    print("  T_B_target = inv(T_W_base) @ T_W_target\n")
+    # # ─── TRANSFORM FORMULA ─────────────────────────────────────────────────
+    # print("Transformation formula to robot frame (B):")
+    # print("  T_B_target = inv(T_W_base) @ T_W_target\n")
 
     # ─── INITIAL ROBOT‐FRAME STATES ────────────────────────────────────────
     T_W_base_inv = np.linalg.inv(base_pose_W)
@@ -145,12 +145,12 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
     cube_pose_B = T_W_base_inv @ cube_pose_W
     ee_pose_B   = T_W_base_inv @ ee_pose_W
 
-    print("### Robot‐frame (B) ###")
-    print(f"  Robot base in B: {np.round(base_pose_B[:3,3],3)}  # should be ~[0,0,0]")
-    print(f"  Cube        in B: {np.round(cube_pose_B[:3,3],3)}")
-    print(f"  EE          in B: {np.round(ee_pose_B[:3,3],3)}\n")
+    # print("### Robot‐frame (B) ###")
+    # print(f"  Robot base in B: {np.round(base_pose_B[:3,3],3)}  # should be ~[0,0,0]")
+    # print(f"  Cube        in B: {np.round(cube_pose_B[:3,3],3)}")
+    # print(f"  EE          in B: {np.round(ee_pose_B[:3,3],3)}\n")
 
-    # ─── INITIAL JOINT STATES & IK COMPARISON ──────────────────────────────
+    # # ─── INITIAL JOINT STATES & IK COMPARISON ──────────────────────────────
     qpos_init = env.robot.get_qpos()
     print(f"Initial qpos (joint space): {np.round(qpos_init,3)}")
 
@@ -162,11 +162,11 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
     target_cart_B = np.concatenate([ee_xyz_B, ee_rpy_B, [ee_grip]])
 
     ik_qpos = kin_helper.compute_ik_sapien(qpos_init, target_cart_B)
-    print(f"IK‐computed qpos to hold EE at its current B‐pose: {np.round(ik_qpos,3)}")
+    # print(f"IK‐computed qpos to hold EE at its current B‐pose: {np.round(ik_qpos,3)}")
 
-    diff = ik_qpos - qpos_init
-    print(f"Difference (IK_qpos – initial_qpos): {np.round(diff,3)}\n")
-    # ────────────────────────────────────────────────────────────────────────
+    # diff = ik_qpos - qpos_init
+    # print(f"Difference (IK_qpos – initial_qpos): {np.round(diff,3)}\n")
+    # # ────────────────────────────────────────────────────────────────────────
     
     # Setup viewer and camera
     add_default_scene_light(env.scene, env.renderer)
@@ -251,7 +251,7 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
         config_dict['observations']['images'][f'{cam.name}_color'] = color_save_kwargs
         config_dict['observations']['images'][f'{cam.name}_depth'] = depth_save_kwargs
 
-    while timesteps < 300:
+    while timesteps < 1000:
         print(f"\n==== STEP {timesteps} ====")
         # re-initialize action each step
         action = np.zeros(arm_dof+1)
@@ -260,43 +260,43 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
         ee_pose_W = env.palm_link.get_pose().to_transformation_matrix()
         pos_W = np.round(ee_pose_W[:3,3], 3)
         rpy_W = np.round(transforms3d.euler.mat2euler(ee_pose_W[:3,:3], axes='sxyz'), 3)
-        print("Initial:")
-        print(f"  EE pose W: pos={pos_W}, rpy={rpy_W}")
+        # print("Initial:")
+        # print(f"  EE pose W: pos={pos_W}, rpy={rpy_W}")
 
         # 2) EE in robot frame
         base_W = env.robot.get_pose().to_transformation_matrix()
         ee_pose_B = np.linalg.inv(base_W) @ ee_pose_W
         pos_B = np.round(ee_pose_B[:3,3], 3)
         rpy_B = np.round(transforms3d.euler.mat2euler(ee_pose_B[:3,:3], axes='sxyz'), 3)
-        print(f"  EE pose B: pos={pos_B}, rpy={rpy_B}")
+        # print(f"  EE pose B: pos={pos_B}, rpy={rpy_B}")
 
         # 3) qpos from env
         qpos_env = np.round(env.robot.get_qpos(), 3)
-        print(f"  qpos_env: {qpos_env}")
+        # print(f"  qpos_env: {qpos_env}")
 
         # 4) IK‐computed qpos for that same EE pose
         target_cart_B = np.concatenate([pos_B, rpy_B, [qpos_env[arm_dof]]])
         qpos_ik_init = np.round(kin_helper.compute_ik_sapien(qpos_env, target_cart_B), 3)
-        print(f"  qpos_ik (hold current EE): {qpos_ik_init}")
+        # print(f"  qpos_ik (hold current EE): {qpos_ik_init}")
 
         # 5) difference
         diff_init = np.round(qpos_ik_init - qpos_env, 3)
-        print(f"  Δqpos (ik − env): {diff_init}\n")
+        # print(f"  Δqpos (ik − env): {diff_init}\n")
 
         # ─── Compute new action ─────────────────────────────────────────
         cartisen_action, quit = scripted_policy.single_trajectory(
             env, env.palm_link.get_pose(), mode=mode
         )
-        print("Next step requested:")
-        print(f"  cartisen_action (W): {np.round(cartisen_action, 3)}")
+        # print("Next step requested:")
+        # print(f"  cartisen_action (W): {np.round(cartisen_action, 3)}")
 
         # 6) Desired EE in W + B
         des_W = np.round(cartisen_action[:3], 3)
-        print(f"  Desired EE pos W: {des_W}")
+        # print(f"  Desired EE pos W: {des_W}")
         des_B = np.round(transform_action_from_world_to_robot(
             cartisen_action, env.robot.get_pose()
         )[:3], 3)
-        print(f"  Desired EE pos B: {des_B}")
+        # print(f"  Desired EE pos B: {des_B}")
 
         # 7) IK → qpos_target
         target_cart_B = np.concatenate([
@@ -319,9 +319,9 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
         # ─── After env.step ───────────────────────────────────────────────
         qpos_post = np.round(env.robot.get_qpos(), 3)
         delta_post = np.round(qpos_post - qpos_target, 3)
-        print("After env.step():")
-        print(f"  qpos_post: {qpos_post}")
-        print(f"  Δqpos post-step (post − target): {delta_post}")
+        # print("After env.step():")
+        # print(f"  qpos_post: {qpos_post}")
+        # print(f"  Δqpos post-step (post − target): {delta_post}")
 
         # your existing data collection:
         data_dict['observations']['joint_pos'].append(env.robot.get_qpos()[:-1])
