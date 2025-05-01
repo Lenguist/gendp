@@ -69,9 +69,11 @@ YX_TABLE_TOP_CAMERAS = {
                         name="left_bottom_view", ),
     "front": dict(position=np.array([0, 0.6, 0.2]), look_at_dir=np.array([0, -0.6, -0.2]), right_dir=np.array([-1, 0, 0]),
                   name="front_view", ),
-    "right": dict(position=np.array([-0.6, 0, 0.2]), look_at_dir=np.array([0.6, 0, -0.2]), right_dir=np.array([0, -1, 0]),
-                  name="right_view", ),
-    
+    # "right": dict(position=np.array([-0.6, 0, 0.2]), look_at_dir=np.array([0.6, 0, -0.2]), right_dir=np.array([0, -1, 0]),
+    #               name="right_view", ),
+    "left": dict(position=np.array([0.6, 0, 0.2]), look_at_dir=np.array([-0.6, 0, -0.2]), right_dir=np.array([0, 1, 0]),
+                 name="left_view", ),
+
     
     # "front": dict(position=np.array([0, 0.6, 0.8]), look_at_dir=np.array([0, -0.6, -0.8]), right_dir=np.array([-1, 0, 0]),
     #               name="front_view", ),

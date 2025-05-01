@@ -2,6 +2,7 @@ import numpy as np
 from pyquaternion import Quaternion
 import transforms3d.euler
 import sapien.core as sapien
+import time
 
 from sapien_env.rl_env.cube_pick_env import CubePickRLEnv
 
@@ -42,6 +43,7 @@ class SingleArmPolicy:
         # Pop to current waypoint
         if self.trajectory[0]['t'] == self.step_count:
             self.curr_waypoint = self.trajectory.pop(0)
+            time.sleep(5)
         # If done
         if len(self.trajectory) == 0:
             return None, True
@@ -62,30 +64,47 @@ class SingleArmPolicy:
         action[6] = gripper
         return action, False
 
+    # def generate_trajectory(self, env: CubePickRLEnv, ee_link_pose, mode='straight'):
+    #     # world pose of cube
+    #     cube_pose = env.cube.get_pose()
+    #     # Define key poses
+    #     pre_grasp = cube_pose.p + np.array([0.0, 0.0, 0.12])
+    #     grasp     = cube_pose.p + np.array([0.0, 0.0, 0.02])
+    #     leave     = cube_pose.p + np.array([0.0, 0.0, 0.30])
+    #     # Keep orientation constant (current ee orientation)
+    #     quat = ee_link_pose.q
+
+    #     # Shortcut for gripper values
+    #     open_g  = SingleArmPolicy.GRIP_OPEN
+    #     closed_g = SingleArmPolicy.GRIP_CLOSED
+
+    #     if mode == 'straight':
+    #         self.trajectory = [
+    #             {'t':   0, 'xyz': ee_link_pose.p, 'quat': quat, 'gripper': open_g},
+    #             {'t':  20, 'xyz': pre_grasp,       'quat': quat, 'gripper': open_g},
+    #             {'t':  60, 'xyz': grasp,           'quat': quat, 'gripper': open_g},
+    #             {'t':  80, 'xyz': grasp,           'quat': quat, 'gripper': closed_g},
+    #             {'t': 100, 'xyz': grasp,           'quat': quat, 'gripper': closed_g},
+    #             {'t': 140, 'xyz': pre_grasp,       'quat': quat, 'gripper': closed_g},
+    #             {'t': 200, 'xyz': leave,           'quat': quat, 'gripper': closed_g},
+    #             {'t': 220, 'xyz': leave,           'quat': quat, 'gripper': closed_g},
+    #         ]
+    #     else:
+    #         raise RuntimeError(f"Mode '{mode}' not implemented for cube pick.")
+
     def generate_trajectory(self, env: CubePickRLEnv, ee_link_pose, mode='straight'):
-        # world pose of cube
-        cube_pose = env.cube.get_pose()
-        # Define key poses
-        pre_grasp = cube_pose.p + np.array([0.0, 0.0, 0.12])
-        grasp     = cube_pose.p + np.array([0.0, 0.0, 0.02])
-        leave     = cube_pose.p + np.array([0.0, 0.0, 0.30])
         # Keep orientation constant (current ee orientation)
         quat = ee_link_pose.q
+        xyz = ee_link_pose.p
 
-        # Shortcut for gripper values
-        open_g  = SingleArmPolicy.GRIP_OPEN
-        closed_g = SingleArmPolicy.GRIP_CLOSED
+        open_g = self.GRIP_OPEN
+        closed_g = self.GRIP_CLOSED
 
         if mode == 'straight':
             self.trajectory = [
-                {'t':   0, 'xyz': ee_link_pose.p, 'quat': quat, 'gripper': open_g},
-                {'t':  20, 'xyz': pre_grasp,       'quat': quat, 'gripper': open_g},
-                {'t':  60, 'xyz': grasp,           'quat': quat, 'gripper': open_g},
-                {'t':  80, 'xyz': grasp,           'quat': quat, 'gripper': closed_g},
-                {'t': 100, 'xyz': grasp,           'quat': quat, 'gripper': closed_g},
-                {'t': 140, 'xyz': pre_grasp,       'quat': quat, 'gripper': closed_g},
-                {'t': 200, 'xyz': leave,           'quat': quat, 'gripper': closed_g},
-                {'t': 220, 'xyz': leave,           'quat': quat, 'gripper': closed_g},
+                {'t':   0, 'xyz': xyz, 'quat': quat, 'gripper': 0.5},       # initial
+                {'t':   100, 'xyz': xyz, 'quat': quat, 'gripper': open_g},    # open fully
+                {'t':   200, 'xyz': xyz, 'quat': quat, 'gripper': closed_g},  # close fully
             ]
         else:
             raise RuntimeError(f"Mode '{mode}' not implemented for cube pick.")
