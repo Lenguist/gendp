@@ -34,7 +34,7 @@ class CubePickEnv(BaseSimulationEnv):
 
     def reset_env(self):
         # Place cube at random X/Y on table (Z = half-height = 0.05)
-        x = self.np_random.uniform(0.1, 0.2)
+        x = self.np_random.uniform(0.0, 0.1)
         y = self.np_random.uniform(-0.2, -0.1)
         pos = np.array([x, y, self.cube_side])  # z = half-height
         quat = transforms3d.euler.euler2quat(0, 0, 0)

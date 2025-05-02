@@ -214,7 +214,7 @@ class BaseRLEnv(BaseSimulationEnv, gym.Env):
             if i < self.arm_dof:
                 joint.set_drive_property(stiffness=1000, damping=1)
             else: 
-                joint.set_drive_property(stiffness=500, damping=5)
+                joint.set_drive_property(stiffness=400, damping=5)
             joint.set_drive_target(drive_target[i])
             current = current_qpos[i]
             target = drive_target[i]
