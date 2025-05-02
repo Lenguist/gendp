@@ -12,7 +12,7 @@ class SingleArmPolicy:
     """
     # gripper joint targets
     GRIP_OPEN = 0.1
-    GRIP_CLOSED = 0.75
+    GRIP_CLOSED = 0.6
 
     def __init__(self, inject_noise=False):
         self.inject_noise = inject_noise
@@ -84,13 +84,13 @@ class SingleArmPolicy:
             self.trajectory = [
                 {'t':   0, 'xyz': ee_link_pose.p, 'quat': quat, 'gripper': open_g},
                 {'t':   100, 'xyz': ee_link_pose.p, 'quat': quat, 'gripper': open_g},
-                {'t':  400, 'xyz': pre_grasp,       'quat': quat, 'gripper': open_g},
-                {'t':  500, 'xyz': grasp,           'quat': quat, 'gripper': open_g},
-                {'t':  550, 'xyz': grasp,           'quat': quat, 'gripper': closed_g},
-                {'t': 600, 'xyz': grasp,           'quat': quat, 'gripper': closed_g},
-                {'t': 650, 'xyz': pre_grasp,       'quat': quat, 'gripper': closed_g},
-                {'t': 700, 'xyz': leave,           'quat': quat, 'gripper': closed_g},
-                {'t': 750, 'xyz': leave,           'quat': quat, 'gripper': open_g},
+                {'t':  120, 'xyz': pre_grasp,       'quat': quat, 'gripper': open_g},
+                {'t':  140, 'xyz': grasp,           'quat': quat, 'gripper': open_g},
+                {'t':  160, 'xyz': grasp,           'quat': quat, 'gripper': closed_g},
+                {'t': 180, 'xyz': grasp,           'quat': quat, 'gripper': closed_g},
+                {'t': 200, 'xyz': pre_grasp,       'quat': quat, 'gripper': closed_g},
+                {'t': 220, 'xyz': leave,           'quat': quat, 'gripper': closed_g},
+                {'t': 240, 'xyz': leave,           'quat': quat, 'gripper': open_g},
             ]
         else:
             raise RuntimeError(f"Mode '{mode}' not implemented for cube pick.")

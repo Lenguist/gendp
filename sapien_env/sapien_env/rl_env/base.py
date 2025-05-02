@@ -212,7 +212,7 @@ class BaseRLEnv(BaseSimulationEnv, gym.Env):
             joint_name = joint.get_name()
             # 6) Send target positions to robot
             if i < self.arm_dof:
-                joint.set_drive_property(stiffness=500, damping=5)
+                joint.set_drive_property(stiffness=1000, damping=1)
             else: 
                 joint.set_drive_property(stiffness=500, damping=5)
             joint.set_drive_target(drive_target[i])
