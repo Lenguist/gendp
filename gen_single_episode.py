@@ -15,6 +15,21 @@ from gendp.common.kinematics_utils import KinHelper
 from datetime import datetime
 import csv
 
+# ADDED THIS FOR PLOTTING
+def load_policy_points(csv_path: str):
+    """
+    Reads episode_{idx}.csv (frame_idx, v0, v1, …)
+    and returns a list of [x,y,z] positions.
+    """
+    pts = []
+    with open(csv_path, 'r') as f:
+        reader = csv.reader(f)
+        next(reader)                   # skip header
+        for row in reader:
+            vals = list(map(float, row[1:]))  # drop timestep/frame_idx
+            pts.append(vals[0:3])            # world‐XYZ only
+    return pts
+
 def stack_dict(dic):
     # stack list of numpy arrays into a single numpy array inside a nested dict
     for key, item in dic.items():
@@ -98,9 +113,8 @@ def task_to_cfg(task, manip_obj=None):
             'robot_name': "xarm7_with_gripper", # "xarm7_with_gripper",
             'use_visual_obs': False,
         })
-        # reuse an existing scripted policy so it just runs some arm motion
         policy_cfg = OmegaConf.create({
-            '_target_': 'sapien_env.teleop.cube_pick_scripted_policy.SingleArmPolicy',
+            '_target_': 'sapien_env.teleop.cube_replay_policy.SingleArmPolicy',
         })
     else:
         raise ValueError(f'Unknown task {task}')
@@ -108,6 +122,16 @@ def task_to_cfg(task, manip_obj=None):
 
 def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None):
     # initialize env
+    # where to save simulated data
+    sim_root = os.path.join(dataset_dir, f"simulation_episode_{episode_idx}")
+    # one “episode_0” inside
+    sim_ep_dir = os.path.join(sim_root, f"episode_{episode_idx}")
+    for cam_idx in range(len(YX_TABLE_TOP_CAMERAS)):
+        os.makedirs(os.path.join(sim_ep_dir, f"camera_{cam_idx}", "rgb"), exist_ok=True)
+        os.makedirs(os.path.join(sim_ep_dir, f"camera_{cam_idx}", "depth"), exist_ok=True)
+    # make a robot folder too if you want to dump robot-pose txts
+    os.makedirs(os.path.join(sim_ep_dir, "robot"), exist_ok=True)
+
     os.system(f'mkdir -p {dataset_dir}')
     robot_name = "xarm7_with_gripper"
     print(f"\n=== INITIALIZING ENV ({episode_idx}) ===")
@@ -181,8 +205,33 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
         gui.viewer.set_camera_xyz(x=0, y=0.5, z=0.5)
     scene = env.scene
     scene.step()
+
+    # # ─── LOAD & VISUALIZE POLICY POINTS WITH TIME GRADIENT + OFFSET ───────
+    # policy_csv = os.path.join("/home/maksymbondarenko/Desktop/gendp/episode_csvs/episode_0001.csv")
+    # raw_pts = load_policy_points(policy_csv)         # list of [x,y,z]
+    # # compute offset so first CSV point sits at current EE
+    # ee_start = env.palm_link.get_pose().p
+    # offset = ee_start - np.array(raw_pts[0], dtype=np.float32)
+
+    # N = len(raw_pts)
+    # for i, p in enumerate(raw_pts):
+    #     p_world = np.array(p, dtype=np.float32) + offset
+    #     t = i / max(1, N - 1)
+    #     rgba = np.array([1 - t, 0.0, t, 1.0])    # red→blue gradient
+    #     gui.add_sphere_visual(
+    #         label=f"policy_pt_{i}",
+    #         pos=p_world,
+    #         rgba=rgba,
+    #         radius=0.01
+    #     )
+    # # ───────────────────────────────────────────────────────────────────────
+
+
     
     timesteps = 0
+    # right after timesteps = 0
+    expected_positions = []   # will hold the [x,y,z] your policy wanted
+    actual_positions   = []   # will hold the true EE [x,y,z] after step()
 
     csv_log_path = os.path.join(dataset_dir, f'log_{episode_idx}.csv')
     csv_file = open(csv_log_path, mode='w', newline='')
@@ -287,6 +336,9 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
         cartisen_action, quit = scripted_policy.single_trajectory(
             env, env.palm_link.get_pose(), mode=mode
         )
+        if cartisen_action is None:
+            print(f"Policy finished at step {timesteps}")
+            break
         # print("Next step requested:")
         # print(f"  cartisen_action (W): {np.round(cartisen_action, 3)}")
 
@@ -313,8 +365,36 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
         # existing sim‐step
         action[:arm_dof]    = qpos_target[:arm_dof]
         action[arm_dof:]    = cartisen_action[6]
+        # 6) Desired EE in W + B
+        des_W = np.round(cartisen_action[:3], 3)
+        expected_positions.append(des_W.copy())
         obs, reward, done, _ = env.step(action[:arm_dof+1])
         rgbs, depths        = gui.render(depth=True)
+        # after env.step(...)
+        ee_actual = env.palm_link.get_pose().p  # world xyz
+        actual_positions.append(np.round(ee_actual, 3))
+
+
+        # save out each camera’s frame
+        for cam_idx, (rgb, depth) in enumerate(zip(rgbs, depths)):
+            # frame filenames
+            fn = f"{timesteps:06d}.png"
+            # RGB
+            cv2.imwrite(
+                os.path.join(sim_ep_dir, f"camera_{cam_idx}", "rgb", fn),
+                rgb
+            )
+            # Depth (as 16-bit PNG)
+            cv2.imwrite(
+                os.path.join(sim_ep_dir, f"camera_{cam_idx}", "depth", fn),
+                depth
+            )
+
+        # save robot’s 5×3 or 9×3 pose for this frame
+        robot_data = env.robot.get_pose().to_transformation_matrix()[:3,3]  # or your full robot txt
+        # for simplicity, you could just dump the gripper xyz:
+        with open(os.path.join(sim_ep_dir, "robot", f"{timesteps:06d}.txt"), "w") as f:
+            f.write(" ".join(map(str, robot_data.tolist())))
 
         # ─── After env.step ───────────────────────────────────────────────
         qpos_post = np.round(env.robot.get_qpos(), 3)
@@ -365,6 +445,16 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
 
         timesteps += 1
 
+        # after csv_file.close() but before env.close()
+    mismatch_csv = os.path.join(dataset_dir, f"mismatch_{episode_idx}.csv")
+    with open(mismatch_csv, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["timestep",
+                         "exp_x","exp_y","exp_z",
+                         "act_x","act_y","act_z"])
+        for i, (e, a) in enumerate(zip(expected_positions, actual_positions)):
+            writer.writerow([i, *e.tolist(), *a.tolist()])
+    print(f"Wrote mismatch log → {mismatch_csv}")
     if reward < 1:
         print("Failed at episode {}".format(episode_idx))
     data_dict = stack_dict(data_dict)
@@ -376,20 +466,10 @@ def main_env(episode_idx, dataset_dir, headless, mode, task_name, manip_obj=None
     env.close()
 
 if __name__ == '__main__':
-    # import argparse
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('episode_idx', help='random seed for the episode')
-    # parser.add_argument('dataset_dir', help='directory to save the dataset')
-    # parser.add_argument('task_name', help='task name, including hang_mug, mug_collect, pen_insertion')
-    # parser.add_argument('--headless', action='store_true', help='whether to run in headless mode')
-    # parser.add_argument('--obj_name', default=None, help='manipulated object name. The full list is shown in YX_DEFAULT_SCALE at sapien_env/sapien_env/utils/yx_object_utils.py')
-    # parser.add_argument('--mode', default='straight', help='mode for scripted policy. Examples are shown in generate_trajectory() at sapien_env/sapien_env/teleop/mug_collect_scripted_policy.py')
-    # args = parser.parse_args()
-
     dataset_dir = os.path.join('datasets', datetime.now().strftime('%Y%m%d_%H%M%S'))
     main_env(episode_idx=0,
              dataset_dir=dataset_dir,
-             headless=False,
+             headless=True,
              mode="straight",
              manip_obj=None,
              task_name="cube_pick")
