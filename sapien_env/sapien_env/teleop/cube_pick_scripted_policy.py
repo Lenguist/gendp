@@ -71,7 +71,7 @@ class SingleArmPolicy:
         cube_pose = env.cube.get_pose()
         # Define key poses
         pre_grasp = cube_pose.p + np.array([0.0, 0.0, 0.12])
-        grasp     = cube_pose.p + np.array([0.0, 0.0, 0.05])
+        grasp     = cube_pose.p + np.array([0.03, 0.0, -0.02])
         leave     = cube_pose.p + np.array([0.0, 0.0, 0.30])
         # Keep orientation constant (current ee orientation)
         quat = ee_link_pose.q
@@ -80,20 +80,23 @@ class SingleArmPolicy:
         open_g  = SingleArmPolicy.GRIP_OPEN
         closed_g = SingleArmPolicy.GRIP_CLOSED
 
+        N = 20
         if mode == 'straight':
             self.trajectory = [
-                {'t':   0, 'xyz': ee_link_pose.p, 'quat': quat, 'gripper': open_g},
-                {'t':  50, 'xyz': ee_link_pose.p, 'quat': quat, 'gripper': open_g},
-                {'t':  70, 'xyz': pre_grasp,       'quat': quat, 'gripper': open_g},
-                {'t':  90, 'xyz': grasp,           'quat': quat, 'gripper': open_g},
-                {'t': 110, 'xyz': grasp,           'quat': quat, 'gripper': closed_g},
-                {'t': 130, 'xyz': pre_grasp,       'quat': quat, 'gripper': closed_g},
-                {'t': 150, 'xyz': leave,           'quat': quat, 'gripper': closed_g},
-                {'t': 179, 'xyz': leave,           'quat': quat, 'gripper': open_g},
+                {'t':   0, 'xyz': ee_link_pose.p, 'quat': quat, 'gripper': open_g},       # initial
+                {'t':   50, 'xyz': ee_link_pose.p, 'quat': quat, 'gripper': open_g},       # initial
+                {'t':   (50+N), 'xyz': pre_grasp, 'quat': quat, 'gripper': open_g},
+                {'t':   50+N+N, 'xyz': grasp, 'quat': quat, 'gripper': open_g},
+                {'t':   3*N+50, 'xyz': grasp, 'quat': quat, 'gripper': closed_g},
+                {'t':   4*N+50, 'xyz': leave, 'quat': quat, 'gripper': closed_g},
+                {'t':   5*N+50, 'xyz': leave, 'quat': quat, 'gripper': open_g},
+                {'t':   5*N+150, 'xyz': leave, 'quat': quat, 'gripper': open_g},
             ]
         else:
             raise RuntimeError(f"Mode '{mode}' not implemented for cube pick.")
-
+        print("Generated trajectory:")
+        for wp in self.trajectory:
+            print(wp)
     # def generate_trajectory(self, env: CubePickRLEnv, ee_link_pose, mode='straight'):
     #     # Keep orientation constant (current ee orientation)
     #     quat = ee_link_pose.q

@@ -25,7 +25,7 @@ class CubePickEnv(BaseSimulationEnv):
         )
 
         # 4) Build a 0.04 m white cube
-        self.cube_side = 0.02
+        self.cube_side = 0.03
         cube_side = self.cube_side
         builder = self.scene.create_actor_builder()
         builder.add_box_visual(half_size=[cube_side, cube_side, cube_side], color=[1, 1, 1])

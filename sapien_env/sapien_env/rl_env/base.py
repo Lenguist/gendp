@@ -149,7 +149,7 @@ class BaseRLEnv(BaseSimulationEnv, gym.Env):
         self.robot_collision_links = [link for link in self.robot.get_links() if len(link.get_collision_shapes()) > 0]
         self.control_time_step = self.scene.get_timestep() * self.frame_skip
 
-        self.pid = PIDController(5, 0.0, 0.0, self.control_time_step, [-0.2, 0.2])
+        self.pid = PIDController(10, 0.0, 0.0, self.control_time_step, [-0.5, 0.5])
         # Choose different step function
         if self.is_robot_free:
             self.rl_step = self.free_sim_step
@@ -212,26 +212,25 @@ class BaseRLEnv(BaseSimulationEnv, gym.Env):
             joint_name = joint.get_name()
             # 6) Send target positions to robot
             if i < self.arm_dof:
-                joint.set_drive_property(stiffness=1000, damping=1)
+                joint.set_drive_property(stiffness=900, damping=120)
             else: 
-                joint.set_drive_property(stiffness=400, damping=5)
+                joint.set_drive_property(stiffness=500, damping=50)
             joint.set_drive_target(drive_target[i])
             current = current_qpos[i]
             target = drive_target[i]
-            pid_out = arm_pid_output[i] if i < self.arm_dof else "N/A"
             ctrl_type = "PID" if i < self.arm_dof else "Direct"
             print(f"[{i}] {joint_name:<25} | "
                 f"Current: {current: .4f} | "
                 f"Target:  {target: .4f} | "
-                f"{ctrl_type} Output: {pid_out}")
+                f"{ctrl_type}")
         print("=========================\n")
 
 
 
         # 7) Advance the simulation
         for _ in range(self.frame_skip):
-            # self.robot.set_qf(self.robot.compute_passive_force(
-            #     external=False, coriolis_and_centrifugal=False))
+            self.robot.set_qf(self.robot.compute_passive_force(
+                external=False, coriolis_and_centrifugal=False))
             self.scene.step()
 
         self.current_step += 1
